@@ -23,7 +23,7 @@ const config = {
           {
             loader: 'babel-loader'
           }
-        ],
+        ]
       }
     ]
   },

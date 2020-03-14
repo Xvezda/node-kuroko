@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-
 const fs = require('fs')
 
-function factorial(n) {
+function factorial (n) {
   /*
   if (n < 2) return 1
   return factorial(n-1) * n
@@ -19,9 +18,7 @@ function factorial(n) {
   return result
 }
 
-
 const input = fs.readFileSync(process.stdin.fd)
 const n = parseInt(input.toString())
 
 console.log(factorial(n))
-

@@ -9,6 +9,8 @@
     "build:dev": "cross-env NODE_ENV=development webpack",
     "watch": "cross-env NODE_ENV=production webpack --watch",
     "watch:dev": "cross-env NODE_ENV=development webpack --watch",
+    "check": "standard",
+    "check:fix": "standard --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

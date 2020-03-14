@@ -6,15 +6,14 @@ import { spawn } from 'child_process'
 import glob from 'glob'
 import yargs from 'yargs'
 
-
-function noLineFeed(strings, ...items) {
-  let result = []
-  let stringsArray = Array.from(strings)
+function noLineFeed (strings, ...items) {
+  const result = []
+  const stringsArray = Array.from(strings)
 
   while (true) {
-    let a = stringsArray.shift()
+    const a = stringsArray.shift()
     result.push(a || '')
-    let b = items.shift()
+    const b = items.shift()
     result.push(b ? b.replace(/\n/g, ' ') : '')
 
     if (a === undefined && b === undefined) {
@@ -24,24 +23,26 @@ function noLineFeed(strings, ...items) {
   return result.join('')
 }
 
-
-async function main() {
+async function main () {
   const argv = yargs
     .help()
     .argv
 
   const target = argv._.shift()
 
-  if (typeof target !== 'string') return 1;
+  if (typeof target !== 'string') return 1
 
   const files = await new Promise((resolve, reject) => {
     glob(path.join(path.dirname(target), '*.in'), {}, (err, files) => {
-      resolve(files);
+      if (err) {
+        return reject(err)
+      }
+      resolve(files)
     })
   })
 
   for (const file of files) {
-    const subprocess = spawn(target, {stdio: ['pipe', 'pipe', 'inherit']})
+    const subprocess = spawn(target, { stdio: ['pipe', 'pipe', 'inherit'] })
 
     let inData
     try {
@@ -52,7 +53,7 @@ async function main() {
     }
 
     const outFilename = file
-      .replace(new RegExp(path.extname(file)+'$'), '') + '.out'
+      .replace(new RegExp(path.extname(file) + '$'), '') + '.out'
 
     let outData
     try {
