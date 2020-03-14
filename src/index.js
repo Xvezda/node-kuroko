@@ -14,7 +14,7 @@ function noLineFeed (strings, ...items) {
     const a = stringsArray.shift()
     result.push(a || '')
     const b = items.shift()
-    result.push(b ? b.replace(/\n/g, ' ') : '')
+    result.push(b ? b.replace(/\n/g, '↵') : '')
 
     if (a === undefined && b === undefined) {
       break
