@@ -5,6 +5,7 @@ import { spawn } from 'child_process'
 
 import glob from 'glob'
 import yargs from 'yargs'
+import { red, green, blue, gray, cyan } from 'chalk'
 
 function noLineFeed (strings, ...items) {
   const result = []
@@ -14,7 +15,7 @@ function noLineFeed (strings, ...items) {
     const a = stringsArray.shift()
     result.push(a || '')
     const b = items.shift()
-    result.push(b ? b.replace(/\n/g, '↵') : '')
+    result.push(b ? b.replace(/\n/g, red`↵`) : '')
 
     if (a === undefined && b === undefined) {
       break
@@ -41,6 +42,8 @@ async function main () {
     })
   })
 
+  let failed = false
+  let count = 1
   for (const file of files) {
     const subprocess = spawn(target, { stdio: ['pipe', 'pipe', 'inherit'] })
 
@@ -80,14 +83,27 @@ async function main () {
     })
     if (outDataString !== outputResult) {
       console.error(
+        cyan(`[${count}]`),
+        red`failed `, gray`-`,
         noLineFeed`Expect \`${outDataString}\`, but output is \`${outputResult}\``
       )
-      return 1
+      failed = true
+    } else {
+      console.log(
+        cyan(`[${count}]`),
+        green`success`, gray`-`,
+        `Test case \`${path.basename(file)}\``,
+        green`=>`,
+        `\`${path.basename(outFilename)}\` correct`)
     }
-    console.log(`Test case \`${file}\` success`)
+    ++count
 
     subprocess.kill()
   }
+  if (failed) {
+    return 1
+  }
+  return 0
 }
 
 main()
