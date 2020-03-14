@@ -1,5 +1,5 @@
 import path from 'path'
-import { promises as fs } from 'fs'
+import fs, { promises as fsPromises } from 'fs'
 import { Readable } from 'stream'
 import { spawn } from 'child_process'
 
@@ -29,12 +29,42 @@ async function main () {
     .help()
     .argv
 
-  const target = argv._.shift()
+  let targetPath = argv._.shift()
 
-  if (typeof target !== 'string') return 1
+  if (typeof targetPath !== 'string') return 1
+
+  const targetStat = await fsPromises.stat(targetPath)
+
+  const indexes = ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
+  if (targetStat.isDirectory()) {
+    execFound: for (const index of indexes) {
+      let matches
+      try {
+        matches = await new Promise((resolve, reject) => {
+          glob(path.join(targetPath, index), {}, (err, files) => {
+            if (err) {
+              return reject(err)
+            }
+            resolve(files)
+          })
+        })
+      } catch (e) {
+        console.error(err)
+        continue
+      }
+      for (const match of matches) {
+        try {
+          await fsPromises
+            .access(path.join(targetPath, index), fs.constants.X_OK)
+          targetPath = path.join(targetPath, index)
+          break execFound
+        } catch (e) {}
+      }
+    }
+  }
 
   const files = await new Promise((resolve, reject) => {
-    glob(path.join(path.dirname(target), '*.in'), {}, (err, files) => {
+    glob(path.join(path.dirname(targetPath), '*.in'), {}, (err, files) => {
       if (err) {
         return reject(err)
       }
@@ -45,11 +75,11 @@ async function main () {
   let failed = false
   let count = 1
   for (const file of files) {
-    const subprocess = spawn(target, { stdio: ['pipe', 'pipe', 'inherit'] })
+    const subprocess = spawn(targetPath, { stdio: ['pipe', 'pipe', 'inherit'] })
 
     let inData
     try {
-      inData = await fs.readFile(file)
+      inData = await fsPromises.readFile(file)
     } catch (e) {
       console.error(`Input file \`${file}\` is missing`)
       return 1
@@ -60,7 +90,7 @@ async function main () {
 
     let outData
     try {
-      outData = await fs.readFile(outFilename)
+      outData = await fsPromises.readFile(outFilename)
     } catch (e) {
       console.error(`Expect output file \`${outFilename}\` not exists`)
       return 1
