@@ -6,15 +6,16 @@
 /**
  * @copyright Xvezda 2020
  */
-
 import path from 'path'
 import fs, { promises as fsPromises } from 'fs'
 import { Readable } from 'stream'
 import { spawn } from 'child_process'
 
-import glob from 'glob'
 import yargs from 'yargs'
+import glob from 'glob'
 import { red, green, gray } from 'chalk'
+
+import packageJson from '../package.json'
 
 const EXIT_SUCCESS = 0
 const EXIT_FAILURE = 1
@@ -38,15 +39,34 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
-function getFilePath () {
+function getArguments () {
   const argv = yargs
-    .help()
+    .scriptName(packageJson.name)
+    .usage('usage: $0 [options...] <file>')
+    .option('file')
+    .describe('file', 'executabel file to test')
+    .alias('f', 'file')
+    .alias('V', 'version')
+    .help('h')
+    .alias('h', 'help')
+    .epilogue(`For more information, check ${packageJson.homepage}`)
     .argv
+  return argv
+}
 
-  return argv._.shift()
+function getFilePath () {
+  const argv = getArguments()
+  const filePath = argv.file || argv._[0]
+  if (!filePath) {
+    yargs.showHelp()
+  }
+  return filePath
 }
 
 async function resolveTarget (filePath) {
+  if (!filePath.match(/^\.{1,2}\//)) {
+    filePath = './' + filePath
+  }
   const targetStat = await fsPromises.stat(filePath)
 
   const indexes = ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
@@ -67,7 +87,6 @@ async function resolveTarget (filePath) {
         continue
       }
       for (const match of matches) {
-        console.log('match:', match)
         try {
           await fsPromises
             .access(path.resolve(match), fs.constants.X_OK)
@@ -75,6 +94,7 @@ async function resolveTarget (filePath) {
         } catch (e) {}
       }
     }
+    return null
   }
   return filePath
 }
@@ -143,7 +163,16 @@ async function main () {
 
   if (typeof targetPath !== 'string') return EXIT_FAILURE
 
-  targetPath = await resolveTarget(targetPath)
+  try {
+    targetPath = await resolveTarget(targetPath)
+  } catch (e) {
+    console.error(`File \`${targetPath}\` does not exists`)
+    return EXIT_FAILURE
+  }
+  if (!targetPath) {
+    console.error('Could not resolve target')
+    return EXIT_FAILURE
+  }
 
   const inputFiles = await getInputFiles(targetPath)
 

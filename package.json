@@ -1,7 +1,7 @@
 {
   "name": "kuroko",
   "version": "1.0.0",
-  "description": "This is judgement!",
+  "description": "Simple local judgement tool",
   "main": "./dist/index.js",
   "bin": "./dist/index.js",
   "scripts": {
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Xvezda/kuroko.git"
+    "url": "git+https://github.com/Xvezda/node-kuroko.git"
   },
   "keywords": [
     "testcase",
@@ -24,9 +24,9 @@
   "author": "Xvezda <xvezda@naver.com> (https://xvezda.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Xvezda/kuroko/issues"
+    "url": "https://github.com/Xvezda/node-kuroko/issues"
   },
-  "homepage": "https://github.com/Xvezda/kuroko#readme",
+  "homepage": "https://github.com/Xvezda/node-kuroko#readme",
   "dependencies": {
     "chalk": "^3.0.0",
     "glob": "^7.1.6",

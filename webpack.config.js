@@ -1,4 +1,5 @@
 const path = require('path')
+const webpack = require('webpack')
 
 const config = {
   mode: process.env.NODE_ENV || 'development',
@@ -29,7 +30,10 @@ const config = {
   },
   resolve: {
     extensions: ['.js']
-  }
+  },
+  plugins: [
+    new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true })
+  ]
 }
 
 if (process.env.NODE_ENV === 'production') {
