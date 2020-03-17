@@ -5,6 +5,17 @@
 Simple local judgement tool.
 
 
+## Installation
+
+```sh
+# npm
+npm install -g kuroko
+
+# yarn
+yarn global add kuroko
+```
+
+
 ## Usage
 ```sh
 $ echo 5 | ./factorial
