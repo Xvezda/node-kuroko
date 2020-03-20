@@ -42,9 +42,9 @@ function noLineFeed (strings, ...items) {
 function getArguments () {
   const argv = yargs
     .scriptName(packageJson.name)
-    .usage('usage: $0 [options...] <file>')
+    .usage('Usage: $0 [options...] <file>')
     .option('file')
-    .describe('file', 'executabel file to test')
+    .describe('file', 'Executable file to test')
     .alias('f', 'file')
     .alias('V', 'version')
     .help('h')
