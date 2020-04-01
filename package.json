@@ -1,6 +1,6 @@
 {
   "name": "kuroko",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple local judgement tool",
   "main": "./dist/index.js",
   "bin": "./dist/index.js",
