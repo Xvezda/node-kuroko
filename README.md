@@ -1,5 +1,8 @@
 # Kuroko
 
+[![Version](https://img.shields.io/npm/v/kuroko)](https://npm.im/kuroko)
+[![License](https://img.shields.io/npm/l/kuroko)](https://npm.im/kuroko)
+
 > ジャッジメントですの！
 
 Simple local judgement tool.
