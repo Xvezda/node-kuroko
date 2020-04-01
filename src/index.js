@@ -22,7 +22,7 @@ const EXIT_FAILURE = 1
 const TEST_SUCCESS = EXIT_SUCCESS
 const TEST_FAILURE = EXIT_FAILURE
 
-console.error = console.error.bind(null, packageJson.name+':')
+console.error = console.error.bind(null, packageJson.name + ':')
 
 function noLineFeed (strings, ...items) {
   const result = []

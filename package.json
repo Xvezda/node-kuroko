@@ -11,6 +11,8 @@
     "watch:dev": "cross-env NODE_ENV=development webpack --watch",
     "format": "standard",
     "format:fix": "standard --fix",
+    "prepublish": "yarn clean && yarn format && yarn build",
+    "clean": "rm -rf dist/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
