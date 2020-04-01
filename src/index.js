@@ -22,6 +22,8 @@ const EXIT_FAILURE = 1
 const TEST_SUCCESS = EXIT_SUCCESS
 const TEST_FAILURE = EXIT_FAILURE
 
+console.error = console.error.bind(null, packageJson.name+':')
+
 function noLineFeed (strings, ...items) {
   const result = []
   const stringsArray = Array.from(strings)
@@ -58,7 +60,8 @@ function getFilePath () {
   const argv = getArguments()
   const filePath = argv.file || argv._[0]
   if (!filePath) {
-    yargs.showHelp()
+    // yargs.showHelp()
+    return './'
   }
   return filePath
 }
@@ -170,7 +173,8 @@ async function main () {
     return EXIT_FAILURE
   }
   if (!targetPath) {
-    console.error('Could not resolve target')
+    console.error('Could not resolve target\n' +
+      `Try '${packageJson.name} --help' for more information`)
     return EXIT_FAILURE
   }
 
