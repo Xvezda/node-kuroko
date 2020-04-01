@@ -9,4 +9,6 @@ pids
 .npm
 node_modules/
 
+demo/
+
 !dist/
