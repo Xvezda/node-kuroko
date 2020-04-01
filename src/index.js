@@ -49,6 +49,7 @@ function getArguments () {
     .describe('file', 'Executable file to test')
     .alias('f', 'file')
     .alias('V', 'version')
+    .version(packageJson.version)
     .help('h')
     .alias('h', 'help')
     .epilogue(`For more information, check ${packageJson.homepage}`)
