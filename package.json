@@ -47,6 +47,7 @@
     "webpack-cli": "^3.3.11"
   },
   "resolutions": {
+    "**/ssri": "^8.0.1",
     "**/serialize-javascript": "^3.1.0",
     "**/yargs-parser": "^18.1.2"
   }
