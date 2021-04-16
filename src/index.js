@@ -154,16 +154,18 @@ async function runTest (subprocess, inputFile, outputFile) {
   let outputResult
   try {
     outputResult = await new Promise((resolve, reject) => {
+      // Cancel on timeout
+      const timer = setTimeout(reject, argv.timeout * SEC_IN_MS)
+
       let result = ''
       subprocess.stdout
         .on('data', data => {
           result += data.toString()
         })
         .on('end', () => {
+          clearTimeout(timer)
           resolve(result)
         })
-      // Cancel on timeout
-      setTimeout(reject, argv.timeout * SEC_IN_MS)
     })
   } catch (e) {
     subprocess.kill(9)  // SIGKILL
