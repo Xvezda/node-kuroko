@@ -1,3 +1,4 @@
+const fs = require('fs')
 const path = require('path')
 const webpack = require('webpack')
 
@@ -32,7 +33,27 @@ const config = {
     extensions: ['.js']
   },
   plugins: [
-    new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true })
+    new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true }),
+    {
+      apply: function (compiler) {
+        compiler.hooks.afterEmit.tap(
+          'MyChmodPlugin',
+          function (compilation) {
+            const envName = [
+              'npm_package_bin',
+              process.env.npm_package_name
+            ].join('_')
+            const binVar = process.env[envName]
+            if (!binVar) return
+
+            const binPath = path.resolve(__dirname, binVar)
+            fs.chmod(binPath, 0o755, function (err) {
+              if (err) throw err
+            })
+          }
+        )
+      }
+    },
   ]
 }
 
