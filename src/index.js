@@ -27,11 +27,6 @@ const SEC_IN_MS = 1000
 const MIN_IN_MS = 60*SEC_IN_MS
 
 
-function logError(...args) {
-  console.error(packageJson.name + ':', ...args)
-}
-
-
 function noLineFeed (strings, ...items) {
   const result = []
   const stringsArray = Array.from(strings)
@@ -109,7 +104,7 @@ async function resolveTarget (filePath) {
           })
         })
       } catch (e) {
-        logError(e)
+        console.error(e)
         continue
       }
       for (const match of matches) {
@@ -143,7 +138,7 @@ async function runTest (subprocess, inputFile, outputFile) {
   try {
     inData = await fsPromises.readFile(inputFile)
   } catch (e) {
-    logError(`Input file \`${inputFile}\` is missing`)
+    console.error(`Input file \`${inputFile}\` is missing`)
     return TEST_FAILURE
   }
 
@@ -151,7 +146,7 @@ async function runTest (subprocess, inputFile, outputFile) {
   try {
     outData = await fsPromises.readFile(outputFile)
   } catch (e) {
-    logError(`Expect output file \`${outputFile}\` not exists`)
+    console.error(`Expect output file \`${outputFile}\` not exists`)
     return TEST_FAILURE
   }
   const inDataString = inData.toString()
@@ -178,14 +173,14 @@ async function runTest (subprocess, inputFile, outputFile) {
     })
   } catch (e) {
     subprocess.kill(9)  // SIGKILL
-    logError(
+    console.error(
       red`timeout`, gray`-`,
       `Force killed process \`${argv.file || argv._[0]}\``,
       `due to timeout limit of \`${argv.timeout}s\` passed`)
     return TEST_FAILURE
   }
   if (outDataString !== outputResult) {
-    logError(
+    console.error(
       red`failed `, gray`-`,
       noLineFeed`Expect \`${outDataString}\`, but output is \`${outputResult}\``
     )
@@ -208,11 +203,11 @@ async function main () {
   try {
     targetPath = await resolveTarget(targetPath)
   } catch (e) {
-    logError(`File \`${targetPath}\` does not exists`)
+    console.error(`File \`${targetPath}\` does not exists`)
     return EXIT_FAILURE
   }
   if (!targetPath) {
-    logError('Could not resolve target\n' +
+    console.error('Could not resolve target\n' +
       `Try '${packageJson.name} --help' for more information`)
     return EXIT_FAILURE
   }
