@@ -69,6 +69,11 @@ function getArguments () {
     .alias('V', 'version')
     .help('h')
     .alias('h', 'help')
+    .check((argv, options) => {
+      if (Number.isNaN(parseInt(argv.timeout)))
+        throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout))
+      return true
+    })
     .epilogue(`For more information, check ${packageJson.homepage}`)
     .argv
   return argv
