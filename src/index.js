@@ -59,9 +59,8 @@ function getArguments () {
 
 function getFilePath () {
   const argv = getArguments()
-  const filePath = argv.file || argv._[0]
+  const filePath = argv.file || argv._[argv._.length-1]
   if (!filePath) {
-    // yargs.showHelp()
     return './'
   }
   return filePath
@@ -170,7 +169,7 @@ async function main () {
   try {
     targetPath = await resolveTarget(targetPath)
   } catch (e) {
-    console.error(`File \`${targetPath}\` does not exists`)
+    console.error(`Tests for path \`${targetPath}\` does not exists`)
     return EXIT_FAILURE
   }
   if (!targetPath) {
