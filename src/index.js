@@ -36,6 +36,9 @@ const argv = yargs
   .option('file')
   .describe('file', 'Executable file to test')
   .alias('f', 'file')
+  .option('path')
+  .describe('path', 'File path to test files')
+  .alias('p', 'path')
   .option('timeout')
   .default('timeout', argsDefault.timeout)
   .describe('timeout',
