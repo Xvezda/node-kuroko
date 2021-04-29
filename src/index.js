@@ -48,6 +48,9 @@ function getArguments () {
     .option('file')
     .describe('file', 'Executable file to test')
     .alias('f', 'file')
+    .option('path')
+    .describe('path', 'File path to test files')
+    .alias('p', 'path')
     .alias('V', 'version')
     .version(packageJson.version)
     .help('h')
@@ -59,7 +62,7 @@ function getArguments () {
 
 function getFilePath () {
   const argv = getArguments()
-  const filePath = argv.file || argv._[argv._.length-1]
+  const filePath = argv.path || argv.file || argv._[argv._.length-1]
   if (!filePath) {
     return './'
   }
