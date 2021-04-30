@@ -138,6 +138,17 @@ async function runTest (subprocess, inputFile, outputFile) {
   const inDataStream = Readable.from(inDataString)
   inDataStream.pipe(subprocess.stdin)
 
+  try {
+    await new Promise((resolve, reject) => {
+      subprocess.stdin
+        .on('finish', resolve)
+        .on('error', reject)
+    })
+  } catch (e) {
+    console.error(`Target process do not accept inputs`)
+    return TEST_FAILURE
+  }
+
   const outDataString = outData.toString()
 
   const outputResult = await new Promise((resolve, reject) => {
