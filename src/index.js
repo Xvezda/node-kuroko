@@ -64,7 +64,7 @@ function getFilePath () {
   if (!filePath) {
     return './'
   }
-  return filePath
+  return path.resolve(filePath, '../')
 }
 
 
@@ -185,18 +185,26 @@ async function main () {
 
     if (typeof testFilePath !== 'string') return EXIT_FAILURE
 
-    try {
-      testFilePath = await resolveTarget(testFilePath)
-    } catch (e) {
-      console.error(`Path \`${testFilePath}\` does not exists`)
-      return EXIT_FAILURE
-    }
   } else {
     testFilePath = argv.path
   }
   const inputFiles = await getInputFiles(testFilePath)
 
-  const command = argv.file || argv._[0]
+  let command
+  if (!argv.file) {
+    try {
+      command = await resolveTarget(testFilePath)
+    } catch (e) {
+      /* Pass */
+    } finally {
+      if (!command) {
+        command = argv._[0]
+      }
+    }
+  } else {
+    command = argv.file
+  }
+
   if (!command) {
     console.error('Test target does not exists\n' +
       `Try '${packageJson.name} --help' for more information`)
