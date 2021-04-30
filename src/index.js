@@ -24,6 +24,23 @@ const TEST_FAILURE = EXIT_FAILURE
 
 console.error = console.error.bind(null, packageJson.name + ':')
 
+const argv = yargs
+  .scriptName(packageJson.name)
+  .usage('Usage: $0 [options...] [command [arguments...]]')
+  .option('file')
+  .describe('file', 'Executable file to test')
+  .alias('f', 'file')
+  .option('path')
+  .describe('path', 'File path to test files')
+  .alias('p', 'path')
+  .alias('V', 'version')
+  .version(packageJson.version)
+  .help('h')
+  .alias('h', 'help')
+  .epilogue(`For more information, check ${packageJson.homepage}`)
+  .argv
+
+
 function noLineFeed (strings, ...items) {
   const result = []
   const stringsArray = Array.from(strings)
@@ -41,33 +58,15 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
-function getArguments () {
-  const argv = yargs
-    .scriptName(packageJson.name)
-    .usage('Usage: $0 [options...] <file>')
-    .option('file')
-    .describe('file', 'Executable file to test')
-    .alias('f', 'file')
-    .option('path')
-    .describe('path', 'File path to test files')
-    .alias('p', 'path')
-    .alias('V', 'version')
-    .version(packageJson.version)
-    .help('h')
-    .alias('h', 'help')
-    .epilogue(`For more information, check ${packageJson.homepage}`)
-    .argv
-  return argv
-}
 
 function getFilePath () {
-  const argv = getArguments()
-  const filePath = argv.path || argv.file || argv._[argv._.length-1]
+  const filePath = argv.file || argv._[argv._.length-1]
   if (!filePath) {
     return './'
   }
   return filePath
 }
+
 
 async function resolveTarget (filePath) {
   if (!filePath.match(/^\.{1,2}\//)) {
@@ -105,9 +104,10 @@ async function resolveTarget (filePath) {
   return filePath
 }
 
+
 async function getInputFiles (targetPath) {
   return new Promise((resolve, reject) => {
-    glob(path.join(path.dirname(targetPath), '*.in'), {}, (err, files) => {
+    glob(path.join(targetPath, '*.in'), {}, (err, files) => {
       if (err) {
         return reject(err)
       }
@@ -115,6 +115,7 @@ async function getInputFiles (targetPath) {
     })
   })
 }
+
 
 async function runTest (subprocess, inputFile, outputFile) {
   let inData
@@ -132,6 +133,7 @@ async function runTest (subprocess, inputFile, outputFile) {
     console.error(`Expect output file \`${outputFile}\` not exists`)
     return TEST_FAILURE
   }
+
   const inDataString = inData.toString()
   const inDataStream = Readable.from(inDataString)
   inDataStream.pipe(subprocess.stdin)
@@ -164,29 +166,41 @@ async function runTest (subprocess, inputFile, outputFile) {
   return TEST_SUCCESS
 }
 
+
 async function main () {
-  let targetPath = getFilePath()
+  let testFilePath
+  if (!argv.path) {
+    testFilePath = getFilePath()
 
-  if (typeof targetPath !== 'string') return EXIT_FAILURE
+    if (typeof testFilePath !== 'string') return EXIT_FAILURE
 
-  try {
-    targetPath = await resolveTarget(targetPath)
-  } catch (e) {
-    console.error(`Tests for path \`${targetPath}\` does not exists`)
-    return EXIT_FAILURE
+    try {
+      testFilePath = await resolveTarget(testFilePath)
+    } catch (e) {
+      console.error(`Path \`${testFilePath}\` does not exists`)
+      return EXIT_FAILURE
+    }
+  } else {
+    testFilePath = argv.path
   }
-  if (!targetPath) {
-    console.error('Could not resolve target\n' +
+  const inputFiles = await getInputFiles(testFilePath)
+
+  const command = argv.file || argv._[0]
+  if (!command) {
+    console.error('Test target does not exists\n' +
       `Try '${packageJson.name} --help' for more information`)
     return EXIT_FAILURE
   }
 
-  const inputFiles = await getInputFiles(targetPath)
+  const args = argv.file ? argv._ : argv._.slice(1)
 
   let failed = false
   for (const inputFile of inputFiles) {
-    const subprocess = spawn(targetPath, { stdio: ['pipe', 'pipe', 'inherit'] })
+    const subprocess = spawn(command, args, {
+      stdio: ['pipe', 'pipe', 'inherit']
+    })
 
+    // Output filenames should match to input files
     const outputFile = inputFile
       .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
 
@@ -205,4 +219,8 @@ async function main () {
 main()
   .then(code => {
     process.exit(code)
+  })
+  .catch(err => {
+    console.error(err)
+    process.exit(1)
   })
