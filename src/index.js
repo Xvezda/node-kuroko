@@ -24,10 +24,10 @@ const TEST_SUCCESS = EXIT_SUCCESS
 const TEST_FAILURE = EXIT_FAILURE
 
 const SEC_IN_MS = 1000
-const MIN_IN_MS = 60*SEC_IN_MS
+// const MIN_IN_MS = 60 * SEC_IN_MS
 
 const argsDefault = {
-  timeout: 30,
+  timeout: 30
 }
 
 const argv = yargs
@@ -49,13 +49,11 @@ const argv = yargs
   .help('h')
   .alias('h', 'help')
   .check((argv, options) => {
-    if (Number.isNaN(parseInt(argv.timeout)))
-      throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout))
+    if (Number.isNaN(parseInt(argv.timeout))) { throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout)) }
     return true
   })
   .epilogue(`For more information, check ${packageJson.homepage}`)
   .argv
-
 
 function noLineFeed (strings, ...items) {
   const result = []
@@ -74,9 +72,8 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
-
 async function getFilePath () {
-  const filePath = argv.file || argv._[argv._.length-1]
+  const filePath = argv.file || argv._[argv._.length - 1]
   try {
     const stat = await fsPromises.stat(filePath)
     if (stat.isDirectory()) {
@@ -87,7 +84,6 @@ async function getFilePath () {
   }
   return path.resolve(filePath, '../')
 }
-
 
 async function resolveTarget (filePath) {
   if (!filePath.match(/^\.{1,2}\/|^\//)) {
@@ -125,7 +121,6 @@ async function resolveTarget (filePath) {
   return filePath
 }
 
-
 async function getInputFiles (targetPath) {
   return new Promise((resolve, reject) => {
     glob(path.join(targetPath, '*.in'), {}, (err, files) => {
@@ -136,7 +131,6 @@ async function getInputFiles (targetPath) {
     })
   })
 }
-
 
 async function runTest (subprocess, inputFile, outputFile) {
   let inData
@@ -166,7 +160,7 @@ async function runTest (subprocess, inputFile, outputFile) {
         .on('error', reject)
     })
   } catch (e) {
-    console.error(`Target process do not accept inputs`)
+    console.error('Target process do not accept inputs')
     return TEST_FAILURE
   }
 
@@ -189,7 +183,7 @@ async function runTest (subprocess, inputFile, outputFile) {
         })
     })
   } catch (e) {
-    subprocess.kill(9)  // SIGKILL
+    subprocess.kill(9) // SIGKILL
     console.error(
       red`timeout`, gray`-`,
       `Force killed process \`${argv.file || argv._[0]}\``,
@@ -212,14 +206,12 @@ async function runTest (subprocess, inputFile, outputFile) {
   return TEST_SUCCESS
 }
 
-
 async function main () {
   let testFilePath
   if (!argv.path) {
     testFilePath = await getFilePath()
 
     if (typeof testFilePath !== 'string') return EXIT_FAILURE
-
   } else {
     testFilePath = argv.path
   }
