@@ -7,6 +7,7 @@
  * @copyright Xvezda 2020
  */
 import path from 'path'
+import util from 'util'
 import fs, { promises as fsPromises } from 'fs'
 import { Readable } from 'stream'
 import { spawn } from 'child_process'
@@ -22,7 +23,9 @@ const EXIT_FAILURE = 1
 const TEST_SUCCESS = EXIT_SUCCESS
 const TEST_FAILURE = EXIT_FAILURE
 
-console.error = console.error.bind(null, packageJson.name + ':')
+const SEC_IN_MS = 1000
+const MIN_IN_MS = 60*SEC_IN_MS
+
 
 function noLineFeed (strings, ...items) {
   const result = []
@@ -42,16 +45,30 @@ function noLineFeed (strings, ...items) {
 }
 
 function getArguments () {
+  const defaults = {
+    timeout: 30,
+  }
+
   const argv = yargs
     .scriptName(packageJson.name)
     .usage('Usage: $0 [options...] <file>')
     .option('file')
     .describe('file', 'Executable file to test')
     .alias('f', 'file')
-    .alias('V', 'version')
+    .option('timeout')
+    .default('timeout', defaults.timeout)
+    .describe('timeout',
+      util.format('Timeout value in seconds (default: %d)', defaults.timeout))
+    .alias('t', 'timeout')
     .version(packageJson.version)
+    .alias('V', 'version')
     .help('h')
     .alias('h', 'help')
+    .check((argv, options) => {
+      if (Number.isNaN(parseInt(argv.timeout)))
+        throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout))
+      return true
+    })
     .epilogue(`For more information, check ${packageJson.homepage}`)
     .argv
   return argv
@@ -115,6 +132,8 @@ async function getInputFiles (targetPath) {
 }
 
 async function runTest (subprocess, inputFile, outputFile) {
+  const argv = getArguments()
+
   let inData
   try {
     inData = await fsPromises.readFile(inputFile)
@@ -136,16 +155,30 @@ async function runTest (subprocess, inputFile, outputFile) {
 
   const outDataString = outData.toString()
 
-  const outputResult = await new Promise((resolve, reject) => {
-    let result = ''
-    subprocess.stdout
-      .on('data', data => {
-        result += data.toString()
-      })
-      .on('end', () => {
-        resolve(result)
-      })
-  })
+  let outputResult
+  try {
+    outputResult = await new Promise((resolve, reject) => {
+      // Cancel on timeout
+      const timer = setTimeout(reject, argv.timeout * SEC_IN_MS)
+
+      let result = ''
+      subprocess.stdout
+        .on('data', data => {
+          result += data.toString()
+        })
+        .on('end', () => {
+          clearTimeout(timer)
+          resolve(result)
+        })
+    })
+  } catch (e) {
+    subprocess.kill(9)  // SIGKILL
+    console.error(
+      red`timeout`, gray`-`,
+      `Force killed process \`${argv.file || argv._[0]}\``,
+      `due to timeout limit of \`${argv.timeout}s\` passed`)
+    return TEST_FAILURE
+  }
   if (outDataString !== outputResult) {
     console.error(
       red`failed `, gray`-`,
@@ -204,3 +237,7 @@ main()
   .then(code => {
     process.exit(code)
   })
+  .catch(err => {
+    console.error(err)
+  })
+
