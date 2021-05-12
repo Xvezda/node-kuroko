@@ -77,12 +77,13 @@ function noLineFeed (strings, ...items) {
 
 async function getFilePath () {
   const filePath = argv.file || argv._[argv._.length-1]
-  if (!filePath) {
+  try {
+    const stat = await fsPromises.stat(filePath)
+    if (stat.isDirectory()) {
+      return path.resolve(filePath)
+    }
+  } catch (e) {
     return './'
-  }
-  const stat = await fsPromises.stat(filePath)
-  if (stat.isDirectory()) {
-    return path.resolve(filePath)
   }
   return path.resolve(filePath, '../')
 }
@@ -223,6 +224,11 @@ async function main () {
     testFilePath = argv.path
   }
   const inputFiles = await getInputFiles(testFilePath)
+  if (!inputFiles || inputFiles.length <= 0) {
+    console.error('Test files does not exists\n' +
+      `Try '${packageJson.name} --help' for more information`)
+    return EXIT_FAILURE
+  }
 
   let command
   if (!argv.file) {
