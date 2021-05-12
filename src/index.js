@@ -256,6 +256,9 @@ async function main () {
       stdio: ['pipe', 'pipe', 'inherit']
     })
 
+    // TODO: How to handle spawn error gracefully?
+    subprocess.on('error', () => void 0)
+
     // Output filenames should match to input files
     const outputFile = inputFile
       .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
