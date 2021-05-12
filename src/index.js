@@ -243,6 +243,11 @@ async function main () {
     }
   } else {
     command = path.resolve(argv.file)
+    try {
+      await fsPromises.stat(command)
+    } catch (e) {
+      command = null
+    }
   }
 
   if (!command) {
