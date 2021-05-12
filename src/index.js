@@ -26,6 +26,33 @@ const TEST_FAILURE = EXIT_FAILURE
 const SEC_IN_MS = 1000
 const MIN_IN_MS = 60*SEC_IN_MS
 
+const argsDefault = {
+  timeout: 30,
+}
+
+const argv = yargs
+  .scriptName(packageJson.name)
+  .usage('Usage: $0 [options...] <file>')
+  .option('file')
+  .describe('file', 'Executable file to test')
+  .alias('f', 'file')
+  .option('timeout')
+  .default('timeout', argsDefault.timeout)
+  .describe('timeout',
+    util.format('Timeout value in seconds (default: %d)', argsDefault.timeout))
+  .alias('t', 'timeout')
+  .version(packageJson.version)
+  .alias('V', 'version')
+  .help('h')
+  .alias('h', 'help')
+  .check((argv, options) => {
+    if (Number.isNaN(parseInt(argv.timeout)))
+      throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout))
+    return true
+  })
+  .epilogue(`For more information, check ${packageJson.homepage}`)
+  .argv
+
 
 function noLineFeed (strings, ...items) {
   const result = []
@@ -44,48 +71,22 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
-function getArguments () {
-  const defaults = {
-    timeout: 30,
-  }
 
-  const argv = yargs
-    .scriptName(packageJson.name)
-    .usage('Usage: $0 [options...] <file>')
-    .option('file')
-    .describe('file', 'Executable file to test')
-    .alias('f', 'file')
-    .option('timeout')
-    .default('timeout', defaults.timeout)
-    .describe('timeout',
-      util.format('Timeout value in seconds (default: %d)', defaults.timeout))
-    .alias('t', 'timeout')
-    .version(packageJson.version)
-    .alias('V', 'version')
-    .help('h')
-    .alias('h', 'help')
-    .check((argv, options) => {
-      if (Number.isNaN(parseInt(argv.timeout)))
-        throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout))
-      return true
-    })
-    .epilogue(`For more information, check ${packageJson.homepage}`)
-    .argv
-  return argv
-}
-
-function getFilePath () {
-  const argv = getArguments()
-  const filePath = argv.file || argv._[0]
+async function getFilePath () {
+  const filePath = argv.file || argv._[argv._.length-1]
   if (!filePath) {
-    // yargs.showHelp()
     return './'
   }
-  return filePath
+  const stat = await fsPromises.stat(filePath)
+  if (stat.isDirectory()) {
+    return path.resolve(filePath)
+  }
+  return path.resolve(filePath, '../')
 }
 
+
 async function resolveTarget (filePath) {
-  if (!filePath.match(/^\.{1,2}\//)) {
+  if (!filePath.match(/^\.{1,2}\/|^\//)) {
     filePath = './' + filePath
   }
   const targetStat = await fsPromises.stat(filePath)
@@ -120,9 +121,10 @@ async function resolveTarget (filePath) {
   return filePath
 }
 
+
 async function getInputFiles (targetPath) {
   return new Promise((resolve, reject) => {
-    glob(path.join(path.dirname(targetPath), '*.in'), {}, (err, files) => {
+    glob(path.join(targetPath, '*.in'), {}, (err, files) => {
       if (err) {
         return reject(err)
       }
@@ -131,9 +133,8 @@ async function getInputFiles (targetPath) {
   })
 }
 
-async function runTest (subprocess, inputFile, outputFile) {
-  const argv = getArguments()
 
+async function runTest (subprocess, inputFile, outputFile) {
   let inData
   try {
     inData = await fsPromises.readFile(inputFile)
@@ -149,9 +150,21 @@ async function runTest (subprocess, inputFile, outputFile) {
     console.error(`Expect output file \`${outputFile}\` not exists`)
     return TEST_FAILURE
   }
+
   const inDataString = inData.toString()
   const inDataStream = Readable.from(inDataString)
   inDataStream.pipe(subprocess.stdin)
+
+  try {
+    await new Promise((resolve, reject) => {
+      subprocess.stdin
+        .on('finish', resolve)
+        .on('error', reject)
+    })
+  } catch (e) {
+    console.error(`Target process do not accept inputs`)
+    return TEST_FAILURE
+  }
 
   const outDataString = outData.toString()
 
@@ -195,29 +208,49 @@ async function runTest (subprocess, inputFile, outputFile) {
   return TEST_SUCCESS
 }
 
+
 async function main () {
-  let targetPath = getFilePath()
+  let testFilePath
+  if (!argv.path) {
+    testFilePath = await getFilePath()
 
-  if (typeof targetPath !== 'string') return EXIT_FAILURE
+    if (typeof testFilePath !== 'string') return EXIT_FAILURE
 
-  try {
-    targetPath = await resolveTarget(targetPath)
-  } catch (e) {
-    console.error(`File \`${targetPath}\` does not exists`)
-    return EXIT_FAILURE
+  } else {
+    testFilePath = argv.path
   }
-  if (!targetPath) {
-    console.error('Could not resolve target\n' +
+  const inputFiles = await getInputFiles(testFilePath)
+
+  let command
+  if (!argv.file) {
+    try {
+      command = await resolveTarget(testFilePath)
+    } catch (e) {
+      /* Pass */
+    } finally {
+      if (!command) {
+        command = argv._[0]
+      }
+    }
+  } else {
+    command = argv.file
+  }
+
+  if (!command) {
+    console.error('Test target does not exists\n' +
       `Try '${packageJson.name} --help' for more information`)
     return EXIT_FAILURE
   }
 
-  const inputFiles = await getInputFiles(targetPath)
+  const args = argv.file ? argv._ : argv._.slice(1)
 
   let failed = false
   for (const inputFile of inputFiles) {
-    const subprocess = spawn(targetPath, { stdio: ['pipe', 'pipe', 'inherit'] })
+    const subprocess = spawn(command, args, {
+      stdio: ['pipe', 'pipe', 'inherit']
+    })
 
+    // Output filenames should match to input files
     const outputFile = inputFile
       .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
 
@@ -239,5 +272,5 @@ main()
   })
   .catch(err => {
     console.error(err)
+    process.exit(1)
   })
-
