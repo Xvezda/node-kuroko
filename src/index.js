@@ -242,7 +242,7 @@ async function main () {
       }
     }
   } else {
-    command = argv.file
+    command = path.resolve(argv.file)
   }
 
   if (!command) {
