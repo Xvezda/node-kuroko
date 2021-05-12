@@ -59,17 +59,21 @@ function noLineFeed (strings, ...items) {
 }
 
 
-function getFilePath () {
+async function getFilePath () {
   const filePath = argv.file || argv._[argv._.length-1]
   if (!filePath) {
     return './'
+  }
+  const stat = await fsPromises.stat(filePath)
+  if (stat.isDirectory()) {
+    return path.resolve(filePath)
   }
   return path.resolve(filePath, '../')
 }
 
 
 async function resolveTarget (filePath) {
-  if (!filePath.match(/^\.{1,2}\//)) {
+  if (!filePath.match(/^\.{1,2}\/|^\//)) {
     filePath = './' + filePath
   }
   const targetStat = await fsPromises.stat(filePath)
@@ -181,7 +185,7 @@ async function runTest (subprocess, inputFile, outputFile) {
 async function main () {
   let testFilePath
   if (!argv.path) {
-    testFilePath = getFilePath()
+    testFilePath = await getFilePath()
 
     if (typeof testFilePath !== 'string') return EXIT_FAILURE
 
