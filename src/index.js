@@ -32,7 +32,7 @@ const argsDefault = {
 
 const argv = yargs
   .scriptName(packageJson.name)
-  .usage('Usage: $0 [options...] <file>')
+  .usage('Usage: $0 [options...] [command [arguments...]]')
   .option('file')
   .describe('file', 'Executable file to test')
   .alias('f', 'file')
