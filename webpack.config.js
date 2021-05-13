@@ -66,6 +66,17 @@ if (process.env.NODE_ENV === 'production') {
 
 if (process.env.NODE_ENV === 'development') {
   /** Development configurations */
+  config.devtool = 'source-map'
+  config.module.rules.push({
+    test: /\.js$/,
+    exclude: /node_modules/,
+    use: [
+      {
+        loader: 'istanbul-instrumenter-loader',
+        options: { esModules: true }
+      }
+    ]
+  })
 }
 
 module.exports = config

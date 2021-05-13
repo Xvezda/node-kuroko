@@ -5,7 +5,7 @@ const { spawn } = require('child_process')
 
 const rootDir = path.resolve(__dirname, '../')
 
-function spawnKuroko(args, opts = {}) {
+function spawnKuroko (args, opts = {}) {
   const kuroko = spawn(path.join(rootDir, 'dist/index.js'),
     [...args], {
       argv0: 'kuroko',
@@ -15,9 +15,10 @@ function spawnKuroko(args, opts = {}) {
   return kuroko
 }
 
+/* TODO: We need tests for non-cli use of kuroko such as: `require('kuroko')` */
 describe('kuroko', function () {
-  this.timeout(10000)
-  this.slow(5000)
+  this.timeout(5000)
+  this.slow(3000)
 
   describe('features', function () {
     it('should find test target automatically', function (done) {
@@ -47,19 +48,27 @@ describe('kuroko', function () {
         })
 
         explicit.on('exit', (code2) => {
-          assert.equal(stdout, stdout2)
-          assert.equal(stderr, stderr2)
-          assert.equal(code, code2)
+          assert.strictEqual(stdout, stdout2)
+          assert.strictEqual(stderr, stderr2)
+          assert.strictEqual(code, code2)
 
           done()
         })
       })
     })
 
+    it('uses current path with emtpy argument', function (done) {
+      spawnKuroko([], { cwd: path.join(rootDir, 'demo/smoke/') })
+        .on('exit', (code) => {
+          assert.strictEqual(code, 0)
+          done()
+        })
+    })
+
     it('runs with only --file option', function (done) {
       spawnKuroko(['--file', 'demo/stdio/in_and_out'])
         .on('exit', (code) => {
-          assert.equal(code, 0)
+          assert.strictEqual(code, 0)
           done()
         })
     })
@@ -67,7 +76,7 @@ describe('kuroko', function () {
     it('works with file alias -f', function (done) {
       spawnKuroko(['-f', 'demo/stdio/in_and_out'])
         .on('exit', (code) => {
-          assert.equal(code, 0)
+          assert.strictEqual(code, 0)
           done()
         })
     })
@@ -75,7 +84,7 @@ describe('kuroko', function () {
     it('throws error with directory', function (done) {
       spawnKuroko(['--file', 'demo/stdio/'])
         .on('exit', (code) => {
-          assert.equal(code, 1)
+          assert.strictEqual(code, 1)
           done()
         })
     })
@@ -83,17 +92,41 @@ describe('kuroko', function () {
     it('supports command which is not an executable file', function (done) {
       spawnKuroko(['--path', 'demo/stdio', 'cat'])
         .on('exit', (code) => {
-          assert.equal(code, 0)
+          assert.strictEqual(code, 0)
+          done()
+        })
+    })
+
+    it('should fail on empty directory', function (done) {
+      spawnKuroko(['demo/empty/'])
+        .on('exit', (code) => {
+          assert.strictEqual(code, 1)
+          done()
+        })
+    })
+
+    it('should fail when no input files', function (done) {
+      spawnKuroko(['demo/notest/'])
+        .on('exit', (code) => {
+          assert.strictEqual(code, 1)
           done()
         })
     })
   })
 
   describe('timeout', function () {
+    it('should fail immediately with NaN value', function (done) {
+      spawnKuroko(['-t', 'foobar', 'demo/timeout/'])
+        .on('exit', (code) => {
+          assert.strictEqual(code, 1)
+          done()
+        })
+    })
+
     it('should timeout immediately with value of zero', function (done) {
       spawnKuroko(['-t', 0, 'demo/timeout'])
         .on('close', (code) => {
-          assert.equal(code, 1)
+          assert.strictEqual(code, 1)
           done()
         })
     })

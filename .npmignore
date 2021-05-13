@@ -11,4 +11,5 @@ node_modules/
 
 demo/
 
+dist/*.map
 !dist/

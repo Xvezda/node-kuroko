@@ -32,7 +32,7 @@ const argsDefault = {
 
 const argv = yargs
   .scriptName(packageJson.name)
-  .usage('Usage: $0 [options...] <file>')
+  .usage('Usage: $0 [options...] [command [arguments...]]')
   .option('file')
   .describe('file', 'Executable file to test')
   .alias('f', 'file')
@@ -49,7 +49,9 @@ const argv = yargs
   .help('h')
   .alias('h', 'help')
   .check((argv, options) => {
-    if (Number.isNaN(parseInt(argv.timeout))) { throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout)) }
+    if (Number.isNaN(parseInt(argv.timeout))) {
+      throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout))
+    }
     return true
   })
   .epilogue(`For more information, check ${packageJson.homepage}`)
@@ -85,35 +87,41 @@ async function getFilePath () {
   return path.resolve(filePath, '../')
 }
 
+function getIndexFiles () {
+  // TODO: Get index pattern from option argument
+  return ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
+}
+
 async function resolveTarget (filePath) {
   if (!filePath.match(/^\.{1,2}\/|^\//)) {
     filePath = './' + filePath
   }
   const targetStat = await fsPromises.stat(filePath)
 
-  const indexes = ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
+  const isExecutable = async (fileName) => {
+    try {
+      await fsPromises.access(path.resolve(fileName), fs.constants.X_OK)
+    } catch (e) {
+      return false
+    }
+    return true
+  }
+  const globPromise = util.promisify(glob)
+
+  const indexes = getIndexFiles()
   if (targetStat.isDirectory()) {
     for (const index of indexes) {
       let matches
       try {
-        matches = await new Promise((resolve, reject) => {
-          glob(path.join(filePath, index), {}, (err, files) => {
-            if (err) {
-              return reject(err)
-            }
-            resolve(files)
-          })
-        })
+        matches = await globPromise(path.join(filePath, index))
       } catch (e) {
         console.error(e)
         continue
       }
       for (const match of matches) {
-        try {
-          await fsPromises
-            .access(path.resolve(match), fs.constants.X_OK)
+        if (await isExecutable(match)) {
           return path.resolve(match)
-        } catch (e) {}
+        }
       }
     }
     return null
@@ -186,7 +194,7 @@ async function runTest (subprocess, inputFile, outputFile) {
     subprocess.kill(9) // SIGKILL
     console.error(
       red`timeout`, gray`-`,
-      `Force killed process \`${argv.file || argv._[0]}\``,
+      `Force killed process \`${subprocess.spawnfile}\``,
       `due to timeout limit of \`${argv.timeout}s\` passed`)
     return TEST_FAILURE
   }
@@ -206,22 +214,14 @@ async function runTest (subprocess, inputFile, outputFile) {
   return TEST_SUCCESS
 }
 
-async function main () {
-  let testFilePath
+async function getTestFilePath () {
   if (!argv.path) {
-    testFilePath = await getFilePath()
-
-    if (typeof testFilePath !== 'string') return EXIT_FAILURE
-  } else {
-    testFilePath = argv.path
+    return getFilePath()
   }
-  const inputFiles = await getInputFiles(testFilePath)
-  if (!inputFiles || inputFiles.length <= 0) {
-    console.error('Test files does not exists\n' +
-      `Try '${packageJson.name} --help' for more information`)
-    return EXIT_FAILURE
-  }
+  return argv.path
+}
 
+async function getCommand (testFilePath) {
   let command
   if (!argv.file) {
     try {
@@ -241,14 +241,31 @@ async function main () {
       command = null
     }
   }
+  return command
+}
 
+function getArguments () {
+  return argv.file ? argv._ : argv._.slice(1)
+}
+
+async function main () {
+  const testFilePath = await getTestFilePath()
+
+  const inputFiles = await getInputFiles(testFilePath)
+  if (!inputFiles || inputFiles.length <= 0) {
+    console.error('Test files does not exists\n' +
+      `Try '${packageJson.name} --help' for more information`)
+    return EXIT_FAILURE
+  }
+
+  const command = await getCommand(testFilePath)
   if (!command) {
     console.error('Test target does not exists\n' +
       `Try '${packageJson.name} --help' for more information`)
     return EXIT_FAILURE
   }
 
-  const args = argv.file ? argv._ : argv._.slice(1)
+  const args = getArguments()
 
   let failed = false
   for (const inputFile of inputFiles) {
@@ -257,7 +274,7 @@ async function main () {
     })
 
     // TODO: How to handle spawn error gracefully?
-    subprocess.on('error', () => void 0)
+    subprocess.on('error', () => {})
 
     // Output filenames should match to input files
     const outputFile = inputFile
