@@ -13,7 +13,8 @@
     "format:fix": "standard --fix",
     "prepublish": "yarn clean && yarn format && yarn build && yarn test",
     "clean": "rm -rf dist/",
-    "test": "mocha"
+    "test": "mocha",
+    "coverage": "nyc mocha"
   },
   "repository": {
     "type": "git",
@@ -44,6 +45,7 @@
     "chai": "^4.3.4",
     "cross-env": "^7.0.2",
     "mocha": "^8.4.0",
+    "nyc": "^15.1.0",
     "standard": "^14.3.1",
     "webpack": "^4.42.0",
     "webpack-cli": "^3.3.11"
