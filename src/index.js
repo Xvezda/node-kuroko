@@ -44,6 +44,9 @@ const argv = yargs
   .describe('timeout',
     util.format('Timeout value in seconds (default: %d)', argsDefault.timeout))
   .alias('t', 'timeout')
+  .option('scaffold')
+  .alias('s', 'scaffold')
+  .describe('scaffold', 'Command or executable file to compare with')
   .version(packageJson.version)
   .alias('V', 'version')
   .help('h')
