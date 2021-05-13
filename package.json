@@ -11,7 +11,7 @@
     "watch:dev": "cross-env NODE_ENV=development webpack --watch",
     "format": "standard",
     "format:fix": "standard --fix",
-    "prepublish": "yarn clean && yarn format && yarn test && yarn build",
+    "prepublish": "yarn clean && yarn format && yarn build && yarn test",
     "clean": "rm -rf dist/",
     "test": "mocha"
   },
