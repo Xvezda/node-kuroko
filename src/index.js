@@ -77,7 +77,7 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
-async function isExecutable(fileName) {
+async function isExecutable (fileName) {
   const filePath = path.resolve(fileName)
   let stats
   try {
@@ -97,7 +97,9 @@ async function isExecutable(fileName) {
   return true
 }
 
-function readablePromise(readable) {
+const globPromise = util.promisify(glob)
+
+function readablePromise (readable) {
   return new Promise((resolve, reject) => {
     let data = ''
     readable.on('data', (d) => {
@@ -136,8 +138,6 @@ async function resolveTarget (filePath) {
   }
   const targetStat = await fsPromises.stat(filePath)
 
-  const globPromise = util.promisify(glob)
-
   const indexes = getIndexFiles()
   if (targetStat.isDirectory()) {
     for (const index of indexes) {
@@ -160,14 +160,7 @@ async function resolveTarget (filePath) {
 }
 
 async function getInputFiles (targetPath) {
-  return new Promise((resolve, reject) => {
-    glob(path.join(targetPath, '*.in'), {}, (err, files) => {
-      if (err) {
-        return reject(err)
-      }
-      resolve(files)
-    })
-  })
+  return globPromise(path.join(targetPath, '*.in'))
 }
 
 async function runTest (subprocess, inputFile, outputFile) {
@@ -206,17 +199,16 @@ async function runTest (subprocess, inputFile, outputFile) {
 
   let outputResult
   try {
-    outputResult = await new Promise(async (resolve, reject) => {
+    outputResult = await new Promise((resolve, reject) => {
       // Cancel on timeout
       const timer = setTimeout(reject, argv.timeout * SEC_IN_MS)
 
-      try {
-        resolve(await readablePromise(subprocess.stdout))
-      } catch (e) {
-        reject(e)
-      } finally {
-        clearTimeout(timer)
-      }
+      readablePromise(subprocess.stdout)
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          clearTimeout(timer)
+        })
     })
   } catch (e) {
     subprocess.kill(9) // SIGKILL
