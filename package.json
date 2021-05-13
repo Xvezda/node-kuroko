@@ -16,7 +16,7 @@
     "test": "mocha",
     "cover": "yarn run cover:unit && yarn run cover:report",
     "cover:unit": "nyc --silent yarn run test",
-    "cover:report": "nyc report --reporter=lcov --reporter=text"
+    "cover:report": "nyc report"
   },
   "repository": {
     "type": "git",
