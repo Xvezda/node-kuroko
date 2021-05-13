@@ -85,35 +85,41 @@ async function getFilePath () {
   return path.resolve(filePath, '../')
 }
 
+function getIndexFiles() {
+  // TODO: Get index pattern from option argument
+  return ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
+}
+
 async function resolveTarget (filePath) {
   if (!filePath.match(/^\.{1,2}\/|^\//)) {
     filePath = './' + filePath
   }
   const targetStat = await fsPromises.stat(filePath)
 
-  const indexes = ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
+  const isExecutable = async (fileName) => {
+    try {
+      await fsPromises.access(path.resolve(fileName), fs.constants.X_OK)
+    } catch (e) {
+      return false
+    }
+    return true
+  }
+  const globPromise = util.promisify(glob)
+
+  const indexes = getIndexFiles()
   if (targetStat.isDirectory()) {
     for (const index of indexes) {
       let matches
       try {
-        matches = await new Promise((resolve, reject) => {
-          glob(path.join(filePath, index), {}, (err, files) => {
-            if (err) {
-              return reject(err)
-            }
-            resolve(files)
-          })
-        })
+        matches = await globPromise(path.join(filePath, index))
       } catch (e) {
         console.error(e)
         continue
       }
       for (const match of matches) {
-        try {
-          await fsPromises
-            .access(path.resolve(match), fs.constants.X_OK)
+        if (await isExecutable(match)) {
           return path.resolve(match)
-        } catch (e) {}
+        }
       }
     }
     return null
@@ -292,3 +298,4 @@ main()
     console.error(err)
     process.exit(1)
   })
+
