@@ -186,7 +186,7 @@ async function runTest (subprocess, inputFile, outputFile) {
     subprocess.kill(9) // SIGKILL
     console.error(
       red`timeout`, gray`-`,
-      `Force killed process \`${argv.file || argv._[0]}\``,
+      `Force killed process \`${subprocess.spawnfile}\``,
       `due to timeout limit of \`${argv.timeout}s\` passed`)
     return TEST_FAILURE
   }
@@ -206,22 +206,14 @@ async function runTest (subprocess, inputFile, outputFile) {
   return TEST_SUCCESS
 }
 
-async function main () {
-  let testFilePath
+async function getTestFilePath() {
   if (!argv.path) {
-    testFilePath = await getFilePath()
-
-    if (typeof testFilePath !== 'string') return EXIT_FAILURE
-  } else {
-    testFilePath = argv.path
+    return await getFilePath()
   }
-  const inputFiles = await getInputFiles(testFilePath)
-  if (!inputFiles || inputFiles.length <= 0) {
-    console.error('Test files does not exists\n' +
-      `Try '${packageJson.name} --help' for more information`)
-    return EXIT_FAILURE
-  }
+  return argv.path
+}
 
+async function getCommand(testFilePath) {
   let command
   if (!argv.file) {
     try {
@@ -241,14 +233,31 @@ async function main () {
       command = null
     }
   }
+  return command
+}
 
+function getArguments() {
+  return argv.file ? argv._ : argv._.slice(1)
+}
+
+async function main () {
+  const testFilePath = await getTestFilePath()
+
+  const inputFiles = await getInputFiles(testFilePath)
+  if (!inputFiles || inputFiles.length <= 0) {
+    console.error('Test files does not exists\n' +
+      `Try '${packageJson.name} --help' for more information`)
+    return EXIT_FAILURE
+  }
+
+  const command = await getCommand(testFilePath)
   if (!command) {
     console.error('Test target does not exists\n' +
       `Try '${packageJson.name} --help' for more information`)
     return EXIT_FAILURE
   }
 
-  const args = argv.file ? argv._ : argv._.slice(1)
+  const args = getArguments()
 
   let failed = false
   for (const inputFile of inputFiles) {
