@@ -1,9 +1,8 @@
-/*
+/**
  * Use of this source code is governed by an MIT-style
  * license that can be found in the LICENSE file or at
  * https://opensource.org/licenses/MIT.
- */
-/**
+ *
  * @copyright Xvezda 2020
  */
 import path from 'path'
@@ -18,13 +17,13 @@ import { red, green, gray } from 'chalk'
 
 import packageJson from '../package.json'
 
-const EXIT_SUCCESS = 0
-const EXIT_FAILURE = 1
-const TEST_SUCCESS = EXIT_SUCCESS
-const TEST_FAILURE = EXIT_FAILURE
+export const EXIT_SUCCESS = 0
+export const EXIT_FAILURE = 1
+// TODO: Use different exitcode for tests
+export const TEST_SUCCESS = EXIT_SUCCESS
+export const TEST_FAILURE = EXIT_FAILURE
 
-const SEC_IN_MS = 1000
-// const MIN_IN_MS = 60 * SEC_IN_MS
+export const SEC_IN_MS = 1000
 
 const argsDefault = {
   timeout: 30
@@ -164,19 +163,15 @@ async function getInputFiles (targetPath) {
 }
 
 async function runTest (subprocess, inputFile, outputFile) {
-  let inData
-  try {
-    inData = await fsPromises.readFile(inputFile)
-  } catch (e) {
-    console.error(`Input file \`${inputFile}\` is missing`)
-    return TEST_FAILURE
-  }
+  const ioPromises = []
+  ioPromises.push(fsPromises.readFile(inputFile))
+  ioPromises.push(fsPromises.readFile(outputFile))
 
-  let outData
+  let inData, outData;
   try {
-    outData = await fsPromises.readFile(outputFile)
+    [inData, outData] = await Promise.all(ioPromises)
   } catch (e) {
-    console.error(`Expect output file \`${outputFile}\` not exists`)
+    console.error(`Error occured while reading test files: ${e}`)
     return TEST_FAILURE
   }
 
@@ -184,22 +179,11 @@ async function runTest (subprocess, inputFile, outputFile) {
   const inDataStream = Readable.from(inDataString)
   inDataStream.pipe(subprocess.stdin)
 
-  try {
-    await new Promise((resolve, reject) => {
-      subprocess.stdin
-        .on('finish', resolve)
-        .on('error', reject)
-    })
-  } catch (e) {
-    console.error('Target process do not accept inputs')
-    return TEST_FAILURE
-  }
+  const expectedOutput = outData.toString()
 
-  const outDataString = outData.toString()
-
-  let outputResult
+  let actualOutput
   try {
-    outputResult = await new Promise((resolve, reject) => {
+    actualOutput = await new Promise((resolve, reject) => {
       // Cancel on timeout
       const timer = setTimeout(reject, argv.timeout * SEC_IN_MS)
 
@@ -218,10 +202,10 @@ async function runTest (subprocess, inputFile, outputFile) {
       `due to timeout limit of \`${argv.timeout}s\` passed`)
     return TEST_FAILURE
   }
-  if (outDataString !== outputResult) {
+  if (expectedOutput.trim() !== actualOutput.trim()) {
     console.error(
       red`failed `, gray`-`,
-      noLineFeed`Expect \`${outDataString}\`, but output is \`${outputResult}\``
+      noLineFeed`Expect \`${expectedOutput}\`, but output is \`${actualOutput}\``
     )
     return TEST_FAILURE
   }
