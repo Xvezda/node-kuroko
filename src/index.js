@@ -97,6 +97,21 @@ async function isExecutable(fileName) {
   return true
 }
 
+function readablePromise(readable) {
+  return new Promise((resolve, reject) => {
+    let data = ''
+    readable.on('data', (d) => {
+      data += d.toString()
+    })
+    readable.on('end', () => {
+      resolve(data)
+    })
+    readable.on('error', (err) => {
+      reject(err)
+    })
+  })
+}
+
 async function getFilePath () {
   const filePath = argv.file || argv.path || argv._[argv._.length - 1]
   try {
@@ -191,19 +206,17 @@ async function runTest (subprocess, inputFile, outputFile) {
 
   let outputResult
   try {
-    outputResult = await new Promise((resolve, reject) => {
+    outputResult = await new Promise(async (resolve, reject) => {
       // Cancel on timeout
       const timer = setTimeout(reject, argv.timeout * SEC_IN_MS)
 
-      let result = ''
-      subprocess.stdout
-        .on('data', data => {
-          result += data.toString()
-        })
-        .on('end', () => {
-          clearTimeout(timer)
-          resolve(result)
-        })
+      try {
+        resolve(await readablePromise(subprocess.stdout))
+      } catch (e) {
+        reject(e)
+      } finally {
+        clearTimeout(timer)
+      }
     })
   } catch (e) {
     subprocess.kill(9) // SIGKILL
