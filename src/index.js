@@ -162,24 +162,9 @@ async function getInputFiles (targetPath) {
   return globPromise(path.join(targetPath, '*.in'))
 }
 
-async function runTest (subprocess, inputFile, outputFile) {
-  const ioPromises = []
-  ioPromises.push(fsPromises.readFile(inputFile))
-  ioPromises.push(fsPromises.readFile(outputFile))
-
-  let inData, outData;
-  try {
-    [inData, outData] = await Promise.all(ioPromises)
-  } catch (e) {
-    console.error(`Error occured while reading test files: ${e}`)
-    return TEST_FAILURE
-  }
-
-  const inDataString = inData.toString()
-  const inDataStream = Readable.from(inDataString)
+async function runTest (subprocess, testInput, expectedOutput) {
+  const inDataStream = Readable.from(testInput)
   inDataStream.pipe(subprocess.stdin)
-
-  const expectedOutput = outData.toString()
 
   let actualOutput
   try {
@@ -209,12 +194,6 @@ async function runTest (subprocess, inputFile, outputFile) {
     )
     return TEST_FAILURE
   }
-  console.log(
-    green`success`, gray`-`,
-    `Test case \`${path.basename(inputFile)}\``,
-    green`=>`,
-    `\`${path.basename(outputFile)}\` correct`)
-
   return TEST_SUCCESS
 }
 
@@ -278,9 +257,28 @@ async function main () {
     const outputFile = inputFile
       .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
 
-    const testResult = await runTest(subprocess, inputFile, outputFile)
+    const ioPromises = []
+    ioPromises.push(fsPromises.readFile(inputFile))
+    ioPromises.push(fsPromises.readFile(outputFile))
+
+    let inData, outData
+    try {
+      [inData, outData] = await Promise.all(ioPromises)
+    } catch (e) {
+      console.error(`Error occured while reading test files: ${e}`)
+      return EXIT_FAILURE
+    }
+
+    const testResult = await runTest(
+      subprocess, inData.toString(), outData.toString())
     if (testResult === TEST_FAILURE) {
       failed = true
+    } else {
+      console.log(
+        green`success`, gray`-`,
+        `Test case \`${path.basename(inputFile)}\``,
+        green`=>`,
+        `\`${path.basename(outputFile)}\` correct`)
     }
     subprocess.kill()
   }
