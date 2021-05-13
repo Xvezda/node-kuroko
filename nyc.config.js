@@ -1,6 +1,7 @@
-const defaultExclude = require('@istanbuljs/schema/default-exclude')
-
 module.exports = {
-  exclude: defaultExclude.concat(['demo/**'])
+  include: ['src/**'],
+  'exclude-node-modules': true,
+  'reporter': ['text', 'html'],
+  'source-map': true
 }
 

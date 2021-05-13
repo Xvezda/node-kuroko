@@ -14,7 +14,8 @@
     "prepublish": "yarn clean && yarn format && yarn build && yarn test",
     "clean": "rm -rf dist/",
     "test": "mocha",
-    "coverage": "nyc mocha"
+    "cover": "nyc mocha",
+    "cover:report": "nyc report --reporter=lcov --reporter=text"
   },
   "repository": {
     "type": "git",
@@ -44,6 +45,7 @@
     "babel-loader": "^8.0.6",
     "chai": "^4.3.4",
     "cross-env": "^7.0.2",
+    "istanbul-instrumenter-loader": "^3.0.1",
     "mocha": "^8.4.0",
     "nyc": "^15.1.0",
     "standard": "^14.3.1",
