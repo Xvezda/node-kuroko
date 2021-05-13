@@ -16,8 +16,8 @@ function spawnKuroko (args, opts = {}) {
 }
 
 describe('kuroko', function () {
-  this.timeout(10000)
-  this.slow(5000)
+  this.timeout(5000)
+  this.slow(3000)
 
   describe('features', function () {
     it('should find test target automatically', function (done) {
@@ -56,6 +56,14 @@ describe('kuroko', function () {
       })
     })
 
+    it('uses current path with emtpy argument', function (done) {
+      spawnKuroko([], { cwd: path.join(rootDir, 'demo/smoke/') })
+        .on('exit', (code) => {
+          assert.strictEqual(code, 0)
+          done()
+        })
+    })
+
     it('runs with only --file option', function (done) {
       spawnKuroko(['--file', 'demo/stdio/in_and_out'])
         .on('exit', (code) => {
@@ -87,9 +95,33 @@ describe('kuroko', function () {
           done()
         })
     })
+
+    it('should fail on empty directory', function (done) {
+      spawnKuroko(['demo/empty/'])
+        .on('exit', (code) => {
+          assert.strictEqual(code, 1)
+          done()
+        })
+    })
+
+    it('should fail when no input files', function (done) {
+      spawnKuroko(['demo/notest/'])
+        .on('exit', (code) => {
+          assert.strictEqual(code, 1)
+          done()
+        })
+    })
   })
 
   describe('timeout', function () {
+    it('should fail immediately with NaN value', function (done) {
+      spawnKuroko(['-t', 'foobar', 'demo/timeout/'])
+        .on('exit', (code) => {
+          assert.strictEqual(code, 1)
+          done()
+        })
+    })
+
     it('should timeout immediately with value of zero', function (done) {
       spawnKuroko(['-t', 0, 'demo/timeout'])
         .on('close', (code) => {

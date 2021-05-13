@@ -49,7 +49,9 @@ const argv = yargs
   .help('h')
   .alias('h', 'help')
   .check((argv, options) => {
-    if (Number.isNaN(parseInt(argv.timeout))) { throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout)) }
+    if (Number.isNaN(parseInt(argv.timeout))) {
+      throw new Error(util.format('Timeout value `%s` is NaN.', argv.timeout))
+    }
     return true
   })
   .epilogue(`For more information, check ${packageJson.homepage}`)
@@ -85,7 +87,7 @@ async function getFilePath () {
   return path.resolve(filePath, '../')
 }
 
-function getIndexFiles() {
+function getIndexFiles () {
   // TODO: Get index pattern from option argument
   return ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
 }
@@ -298,4 +300,3 @@ main()
     console.error(err)
     process.exit(1)
   })
-
