@@ -15,6 +15,7 @@ function spawnKuroko (args, opts = {}) {
   return kuroko
 }
 
+/* TODO: We need tests for non-cli use of kuroko such as: `require('kuroko')` */
 describe('kuroko', function () {
   this.timeout(5000)
   this.slow(3000)
