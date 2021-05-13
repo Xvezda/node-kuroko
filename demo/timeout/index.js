@@ -4,4 +4,4 @@
 while (true) {}
 
 // Maybe? :/
-console.log('bar')
+console.log('bar') // eslint-disable-line no-unreachable

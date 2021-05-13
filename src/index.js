@@ -206,14 +206,14 @@ async function runTest (subprocess, inputFile, outputFile) {
   return TEST_SUCCESS
 }
 
-async function getTestFilePath() {
+async function getTestFilePath () {
   if (!argv.path) {
-    return await getFilePath()
+    return getFilePath()
   }
   return argv.path
 }
 
-async function getCommand(testFilePath) {
+async function getCommand (testFilePath) {
   let command
   if (!argv.file) {
     try {
@@ -236,7 +236,7 @@ async function getCommand(testFilePath) {
   return command
 }
 
-function getArguments() {
+function getArguments () {
   return argv.file ? argv._ : argv._.slice(1)
 }
 
@@ -266,7 +266,7 @@ async function main () {
     })
 
     // TODO: How to handle spawn error gracefully?
-    subprocess.on('error', () => void 0)
+    subprocess.on('error', () => {})
 
     // Output filenames should match to input files
     const outputFile = inputFile

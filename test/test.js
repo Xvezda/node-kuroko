@@ -5,7 +5,7 @@ const { spawn } = require('child_process')
 
 const rootDir = path.resolve(__dirname, '../')
 
-function spawnKuroko(args, opts = {}) {
+function spawnKuroko (args, opts = {}) {
   const kuroko = spawn(path.join(rootDir, 'dist/index.js'),
     [...args], {
       argv0: 'kuroko',
@@ -47,9 +47,9 @@ describe('kuroko', function () {
         })
 
         explicit.on('exit', (code2) => {
-          assert.equal(stdout, stdout2)
-          assert.equal(stderr, stderr2)
-          assert.equal(code, code2)
+          assert.strictEqual(stdout, stdout2)
+          assert.strictEqual(stderr, stderr2)
+          assert.strictEqual(code, code2)
 
           done()
         })
@@ -59,7 +59,7 @@ describe('kuroko', function () {
     it('runs with only --file option', function (done) {
       spawnKuroko(['--file', 'demo/stdio/in_and_out'])
         .on('exit', (code) => {
-          assert.equal(code, 0)
+          assert.strictEqual(code, 0)
           done()
         })
     })
@@ -67,7 +67,7 @@ describe('kuroko', function () {
     it('works with file alias -f', function (done) {
       spawnKuroko(['-f', 'demo/stdio/in_and_out'])
         .on('exit', (code) => {
-          assert.equal(code, 0)
+          assert.strictEqual(code, 0)
           done()
         })
     })
@@ -75,7 +75,7 @@ describe('kuroko', function () {
     it('throws error with directory', function (done) {
       spawnKuroko(['--file', 'demo/stdio/'])
         .on('exit', (code) => {
-          assert.equal(code, 1)
+          assert.strictEqual(code, 1)
           done()
         })
     })
@@ -83,7 +83,7 @@ describe('kuroko', function () {
     it('supports command which is not an executable file', function (done) {
       spawnKuroko(['--path', 'demo/stdio', 'cat'])
         .on('exit', (code) => {
-          assert.equal(code, 0)
+          assert.strictEqual(code, 0)
           done()
         })
     })
@@ -93,7 +93,7 @@ describe('kuroko', function () {
     it('should timeout immediately with value of zero', function (done) {
       spawnKuroko(['-t', 0, 'demo/timeout'])
         .on('close', (code) => {
-          assert.equal(code, 1)
+          assert.strictEqual(code, 1)
           done()
         })
     })
