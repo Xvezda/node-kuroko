@@ -74,6 +74,26 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
+async function isExecutable(fileName) {
+  const filePath = path.resolve(fileName)
+  let stats
+  try {
+    stats = await fsPromises.stat(filePath)
+  } catch (e) {
+    return false
+  }
+  if (!stats.isFile()) {
+    return false
+  }
+
+  try {
+    await fsPromises.access(filePath, fs.constants.X_OK)
+  } catch (e) {
+    return false
+  }
+  return true
+}
+
 async function getFilePath () {
   const filePath = argv.file || argv._[argv._.length - 1]
   try {
@@ -98,14 +118,6 @@ async function resolveTarget (filePath) {
   }
   const targetStat = await fsPromises.stat(filePath)
 
-  const isExecutable = async (fileName) => {
-    try {
-      await fsPromises.access(path.resolve(fileName), fs.constants.X_OK)
-    } catch (e) {
-      return false
-    }
-    return true
-  }
   const globPromise = util.promisify(glob)
 
   const indexes = getIndexFiles()
@@ -227,19 +239,16 @@ async function getCommand (testFilePath) {
     try {
       command = await resolveTarget(testFilePath)
     } catch (e) {
-      /* Pass */
-    } finally {
-      if (!command) {
-        command = argv._[0]
-      }
+      return null
     }
   } else {
     command = path.resolve(argv.file)
-    try {
-      await fsPromises.stat(command)
-    } catch (e) {
-      command = null
-    }
+  }
+
+  try {
+    await fsPromises.access(command, fs.constants.X_OK)
+  } catch (e) {
+    return argv._.length > 0 ? argv._[0] : null
   }
   return command
 }
