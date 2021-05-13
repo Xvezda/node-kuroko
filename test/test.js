@@ -65,6 +65,14 @@ describe('kuroko', function () {
         })
     })
 
+    it('should always fail with wrong output', function (done) {
+      spawnKuroko(['--path', 'demo/smoke/', 'echo', 'fail'])
+        .on('exit', (code) => {
+          assert.strictEqual(code, 1)
+          done()
+        })
+    })
+
     it('runs with only --file option', function (done) {
       spawnKuroko(['--file', 'demo/stdio/in_and_out'])
         .on('exit', (code) => {

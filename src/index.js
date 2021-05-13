@@ -95,7 +95,7 @@ async function isExecutable(fileName) {
 }
 
 async function getFilePath () {
-  const filePath = argv.file || argv._[argv._.length - 1]
+  const filePath = argv.file || argv.path || argv._[argv._.length - 1]
   try {
     const stat = await fsPromises.stat(filePath)
     if (stat.isDirectory()) {
@@ -234,23 +234,20 @@ async function getTestFilePath () {
 }
 
 async function getCommand (testFilePath) {
-  let command
-  if (!argv.file) {
+  if (argv._.length > 0) {
     try {
-      command = await resolveTarget(testFilePath)
+      await fsPromises.access(argv._[0])
     } catch (e) {
-      return null
+      return argv._[0]
     }
-  } else {
-    command = path.resolve(argv.file)
   }
 
-  try {
-    await fsPromises.access(command, fs.constants.X_OK)
-  } catch (e) {
-    return argv._.length > 0 ? argv._[0] : null
+  if (!argv.file) {
+    try {
+      return await resolveTarget(testFilePath)
+    } catch (e) {}
   }
-  return command
+  return argv.file
 }
 
 function getArguments () {
