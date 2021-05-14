@@ -164,7 +164,14 @@ async function getInputFiles (targetPath) {
 
 async function getOutputByInput(subprocess, input) {
   const inDataStream = Readable.from(input)
-  inDataStream.pipe(subprocess.stdin)
+
+  // Check pipe to subprocess success
+  await new Promise((resolve, reject) => {
+    subprocess.on('error', reject)
+    subprocess.stdin.on('pipe', resolve)
+
+    inDataStream.pipe(subprocess.stdin)
+  })
 
   let output = ''
   try {
@@ -180,12 +187,9 @@ async function getOutputByInput(subprocess, input) {
         })
     })
   } catch (e) {
+    // TODO: responsibility of killing process is up to caller, not here.
     subprocess.kill(9) // SIGKILL
-    console.error(
-      red`timeout`, gray`-`,
-      `Force killed process \`${subprocess.spawnfile}\``,
-      `due to timeout limit of \`${argv.timeout}s\` passed`)
-    return null
+    throw e
   }
   return output
 }
@@ -195,6 +199,10 @@ async function runTest (subprocess, testInput, expectedOutput) {
   try {
     actualOutput = await getOutputByInput(subprocess, testInput)
   } catch (e) {
+    console.error(
+      red`timeout`, gray`-`,
+      `Force killed process \`${subprocess.spawnfile}\``,
+      `due to timeout limit of \`${argv.timeout}s\` passed`)
     return TEST_FAILURE
   }
   if (expectedOutput.trim() !== actualOutput.trim()) {
@@ -263,32 +271,52 @@ async function main () {
     // TODO: How to handle spawn error gracefully?
     subprocess.on('error', () => {})
 
-    // Output filenames should match to input files
-    const outputFile = inputFile
-      .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
+    const input = await fsPromises.readFile(inputFile)
+    const inputName = path.basename(inputFile)
 
-    const ioPromises = []
-    ioPromises.push(fsPromises.readFile(inputFile))
-    ioPromises.push(fsPromises.readFile(outputFile))
+    let output, outputName
+    if (argv.scaffold) {
+      const tokens = argv.scaffold.split(' ')
+      const scaffoldProcess = spawn(tokens[0], tokens.slice(1), {
+        stdio: ['pipe', 'pipe', 'inherit']
+      })
 
-    let inData, outData
-    try {
-      [inData, outData] = await Promise.all(ioPromises)
-    } catch (e) {
-      console.error(`Error occured while reading test files: ${e}`)
-      return EXIT_FAILURE
+      output = await getOutputByInput(scaffoldProcess, input)
+      scaffoldProcess.kill()
+
+      const exitCode = await new Promise((resolve, reject) => {
+        scaffoldProcess.on('exit', resolve)
+      })
+      if (exitCode !== 0) {
+        console.error(`Something went wrong while spawning scaffold process`)
+        return EXIT_FAILURE
+      }
+      outputName = `${argv.scaffold} < ${inputName}`
+    } else {
+      // Output filenames should match to input files
+      const outputFile = inputFile
+        .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
+
+      try {
+        output = await fsPromises.readFile(outputFile)
+      } catch (e) {
+        console.error(`Error occured while reading test files: ${e}`)
+        return EXIT_FAILURE
+      }
+      outputName = path.basename(outputFile)
     }
 
     const testResult = await runTest(
-      subprocess, inData.toString(), outData.toString())
+      subprocess, input.toString(), output.toString())
+
     if (testResult === TEST_FAILURE) {
       failed = true
     } else {
       console.log(
         green`success`, gray`-`,
-        `Test case \`${path.basename(inputFile)}\``,
+        `Test case \`${inputName}\``,
         green`=>`,
-        `\`${path.basename(outputFile)}\` correct`)
+        `\`${outputName}\` correct`)
     }
     subprocess.kill()
   }
