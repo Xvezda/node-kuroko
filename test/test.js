@@ -37,7 +37,7 @@ describe('kuroko', function () {
 
   describe('client', function () {
     it('should find test target automatically', function (done) {
-      const kuroko = spawnKuroko(['demo/factorial/'], { stdio: 'pipe' })
+      const kuroko = spawnKuroko(['test/assets/factorial/'], { stdio: 'pipe' })
 
       let stdout = ''
       kuroko.stdout.on('data', (data) => {
@@ -50,7 +50,7 @@ describe('kuroko', function () {
       })
 
       kuroko.on('exit', (code) => {
-        const explicit = spawnKuroko(['demo/factorial/index.js'],
+        const explicit = spawnKuroko(['test/assets/factorial/index.js'],
           { stdio: 'pipe' })
 
         let stdout2 = ''
@@ -82,7 +82,7 @@ describe('kuroko', function () {
     })
 
     it('uses current path with emtpy argument', function (done) {
-      spawnKuroko([], { cwd: path.join(rootDir, 'demo/smoke/') })
+      spawnKuroko([], { cwd: path.join(rootDir, 'test/assets/smoke/') })
         .on('exit', (code) => {
           assert.strictEqual(code, 0)
           done()
@@ -90,7 +90,7 @@ describe('kuroko', function () {
     })
 
     it('should always fail with wrong output', function (done) {
-      spawnKuroko(['--path', 'demo/smoke/', 'echo', 'fail'])
+      spawnKuroko(['--path', 'test/assets/smoke/', 'echo', 'fail'])
         .on('exit', (code) => {
           assert.strictEqual(code, 1)
           done()
@@ -98,7 +98,7 @@ describe('kuroko', function () {
     })
 
     it('runs with only --file option', function (done) {
-      spawnKuroko(['--file', 'demo/stdio/in_and_out'])
+      spawnKuroko(['--file', 'test/assets/stdio/in_and_out'])
         .on('exit', (code) => {
           assert.strictEqual(code, 0)
           done()
@@ -106,7 +106,7 @@ describe('kuroko', function () {
     })
 
     it('works with file alias -f', function (done) {
-      spawnKuroko(['-f', 'demo/stdio/in_and_out'])
+      spawnKuroko(['-f', 'test/assets/stdio/in_and_out'])
         .on('exit', (code) => {
           assert.strictEqual(code, 0)
           done()
@@ -114,7 +114,7 @@ describe('kuroko', function () {
     })
 
     it('throws error with directory', function (done) {
-      spawnKuroko(['--file', 'demo/stdio/'])
+      spawnKuroko(['--file', 'test/assets/stdio/'])
         .on('exit', (code) => {
           assert.strictEqual(code, 1)
           done()
@@ -122,7 +122,7 @@ describe('kuroko', function () {
     })
 
     it('supports command which is not an executable file', function (done) {
-      spawnKuroko(['--path', 'demo/stdio', 'cat'])
+      spawnKuroko(['--path', 'test/assets/stdio', 'cat'])
         .on('exit', (code) => {
           assert.strictEqual(code, 0)
           done()
@@ -130,7 +130,7 @@ describe('kuroko', function () {
     })
 
     it('should fail on empty directory', function (done) {
-      spawnKuroko(['demo/empty/'])
+      spawnKuroko(['test/assets/empty/'])
         .on('exit', (code) => {
           assert.strictEqual(code, 1)
           done()
@@ -138,7 +138,7 @@ describe('kuroko', function () {
     })
 
     it('should fail when no input files', function (done) {
-      spawnKuroko(['demo/notest/'])
+      spawnKuroko(['test/assets/notest/'])
         .on('exit', (code) => {
           assert.strictEqual(code, 1)
           done()
@@ -147,7 +147,7 @@ describe('kuroko', function () {
 
     describe('timeout', function () {
       it('should fail immediately with NaN value', function (done) {
-        spawnKuroko(['-t', 'foobar', 'demo/timeout/'])
+        spawnKuroko(['-t', 'foobar', 'test/assets/timeout/'])
           .on('exit', (code) => {
             assert.strictEqual(code, 1)
             done()
@@ -155,7 +155,7 @@ describe('kuroko', function () {
       })
 
       it('should timeout immediately with value of zero', function (done) {
-        spawnKuroko(['-t', 0, 'demo/timeout'])
+        spawnKuroko(['-t', 0, 'test/assets/timeout'])
           .on('close', (code) => {
             assert.strictEqual(code, 1)
             done()
@@ -168,7 +168,7 @@ describe('kuroko', function () {
           flag = true
         }, 1000)
 
-        spawnKuroko(['-t', 1, 'demo/timeout'])
+        spawnKuroko(['-t', 1, 'test/assets/timeout'])
           .on('exit', (code) => {
             assert.ok(flag)
             done()
@@ -179,7 +179,7 @@ describe('kuroko', function () {
     describe('scaffolding', function (done) {
       it('should success with binary which satisfies requirements', function (done) {
         spawnKuroko(['--scaffold', './echo.py', 'in_and_out'], {
-          cwd: path.join(rootDir, 'demo/stdio/')
+          cwd: path.join(rootDir, 'test/assets/stdio/')
         })
           .on('exit', (code) => {
             assert.strictEqual(code, 0)
@@ -189,7 +189,7 @@ describe('kuroko', function () {
 
       it('should accept alias style argument', function (done) {
         spawnKuroko(['-s', './echo.py', 'in_and_out'], {
-          cwd: path.join(rootDir, 'demo/stdio/')
+          cwd: path.join(rootDir, 'test/assets/stdio/')
         })
           .on('exit', (code) => {
             assert.strictEqual(code, 0)
@@ -199,7 +199,7 @@ describe('kuroko', function () {
 
       it('should work with quoted command', function (done) {
         spawnKuroko(['--scaffold', '"python echo.py"', 'in_and_out'], {
-          cwd: path.join(rootDir, 'demo/stdio/')
+          cwd: path.join(rootDir, 'test/assets/stdio/')
         })
           .on('exit', (code) => {
             assert.strictEqual(code, 0)
@@ -208,7 +208,7 @@ describe('kuroko', function () {
       })
 
       it('should work with end of options indicator', function (done) {
-        spawnKuroko(['-p', 'demo/scaffold', '-s', 'bc',
+        spawnKuroko(['-p', 'test/assets/scaffold', '-s', 'bc',
           '--', 'python', '-c', '"print(eval(str(input())))"'])
           .on('exit', (code) => {
             assert.strictEqual(code, 0)
