@@ -1,4 +1,4 @@
-# Kuroko
+# Kuroko <img src="https://gist.githubusercontent.com/Xvezda/c95a8f0e32f8f98ddae6a5938c7d6c1a/raw/kuroko.png" widht="300" height="378" align="right">
 
 [![Version](https://img.shields.io/npm/v/kuroko)](https://npm.im/kuroko)
 [![License](https://img.shields.io/npm/l/kuroko)](https://npm.im/kuroko)
