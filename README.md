@@ -5,7 +5,7 @@
 
 > ジャッジメントですの！
 
-Simple local judgement tool.
+Simple local offline judgement tool for competitive programming.
 
 
 ## Installation
@@ -20,6 +20,9 @@ yarn global add kuroko
 
 
 ## Usage
+
+Basic usage:
+
 ```sh
 $ echo 5 | ./factorial
 120
@@ -30,3 +33,24 @@ $ # Run test
 $ kuroko factorial
 success - Test case `1.in` => `1.out` correct
 ```
+
+Use scaffolding:
+
+```sh
+$ # Create test inputs
+$ echo foo > foo.in
+$ echo bar > bar.in
+$ echo baz > baz.in
+$ # Let's make echo script
+$ cat <<'EOF' > echo.sh && chmod +x echo.sh
+#!/bin/sh
+read line
+echo $line
+EOF
+$ # We can use `cat` command to verify script
+$ kuroko --scaffold=cat ./echo.sh
+success - Test case `bar.in` => `cat < bar.in` correct
+success - Test case `baz.in` => `cat < baz.in` correct
+success - Test case `foo.in` => `cat < foo.in` correct
+```
+
