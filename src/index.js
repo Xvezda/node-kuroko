@@ -59,6 +59,10 @@ const argv = yargs
   .epilogue(`For more information, check ${packageJson.homepage}`)
   .argv
 
+/**
+ * Template literal which replaces linefeed to special characters
+ * @returns {string}
+ */
 function noLineFeed (strings, ...items) {
   const result = []
   const stringsArray = Array.from(strings)
@@ -76,6 +80,11 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
+/**
+ * Check if file is executable file
+ * @param {string} fileName
+ * @return {Promise} Promise object represents boolean result
+ */
 async function isExecutable (fileName) {
   const filePath = path.resolve(fileName)
   let stats
@@ -96,8 +105,17 @@ async function isExecutable (fileName) {
   return true
 }
 
+/**
+ * Promisified glob
+ * @return {Promise}
+ */
 const globPromise = util.promisify(glob)
 
+/**
+ * Convert readable stream into string
+ * @param {Readable} readable
+ * @return {Promise}
+ */
 function readablePromise (readable) {
   return new Promise((resolve, reject) => {
     let data = ''
@@ -113,6 +131,10 @@ function readablePromise (readable) {
   })
 }
 
+/**
+ * Get base directory of tests
+ * @return {string}
+ */
 async function getFilePath () {
   const filePath = argv.file || argv.path || argv._[argv._.length - 1]
   try {
@@ -126,6 +148,9 @@ async function getFilePath () {
   return path.resolve(filePath, '../')
 }
 
+/**
+ * Return index file patterns to resolve test target implicitly
+ */
 function getIndexFiles () {
   // TODO: Get index pattern from option argument
   return ['index.js', 'index[._-]*', 'index', 'main[._-]*', 'main']
@@ -158,10 +183,18 @@ async function resolveTarget (filePath) {
   return filePath
 }
 
+/**
+ * Get list of input files by given path
+ * @return {Promise}
+ */
 async function getInputFiles (targetPath) {
   return globPromise(path.join(targetPath, '*.in'))
 }
 
+/**
+ * Get output string of process when input file piped into
+ * @return {Promise}
+ */
 async function getOutputByInput (subprocess, input) {
   const inDataStream = Readable.from(input)
 
@@ -187,7 +220,7 @@ async function getOutputByInput (subprocess, input) {
         })
     })
   } catch (e) {
-    // TODO: responsibility of killing process is up to caller, not here.
+    // TODO: Responsibility of killing process is up to caller, not here.
     subprocess.kill('SIGKILL')
     throw e
   }
@@ -228,6 +261,10 @@ async function getTestFilePath () {
   return argv.path
 }
 
+/**
+ * Get spawnable string
+ * @return {Promise}
+ */
 async function getCommand (testFilePath) {
   const argv0 = argv._[0]
   const isExists = async (fileName) => {
@@ -267,10 +304,16 @@ async function getCommand (testFilePath) {
     : executable
 }
 
+/**
+ * Get non argv0 arguments
+ */
 function getArguments () {
   return argv.file ? argv._ : argv._.slice(1)
 }
 
+/**
+ * Entry of client
+ */
 async function main () {
   const testFilePath = await getTestFilePath()
 
