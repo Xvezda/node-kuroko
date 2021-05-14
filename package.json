@@ -1,9 +1,12 @@
 {
   "name": "kuroko",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Simple local judgement tool",
   "main": "./dist/index.js",
   "bin": "./dist/index.js",
+  "files": [
+    "./dist/"
+  ],
   "scripts": {
     "build": "cross-env NODE_ENV=production webpack",
     "build:dev": "cross-env NODE_ENV=development webpack",
@@ -11,18 +14,27 @@
     "watch:dev": "cross-env NODE_ENV=development webpack --watch",
     "format": "standard",
     "format:fix": "standard --fix",
-    "prepublish": "yarn clean && yarn format && yarn build",
+    "prepublish": "in-publish && yarn clean && yarn format && yarn build && yarn test || not-in-publish",
     "clean": "rm -rf dist/",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha",
+    "docs": "jsdoc -r src/",
+    "cover": "yarn run cover:unit && yarn run cover:report",
+    "cover:unit": "nyc --silent yarn run test",
+    "cover:report": "nyc report"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Xvezda/node-kuroko.git"
   },
   "keywords": [
+    "tests",
     "testcase",
     "judgement",
-    "problem solving"
+    "problem solving",
+    "competitive programming",
+    "cli",
+    "command",
+    "scaffolding"
   ],
   "author": "Xvezda <xvezda@naver.com> (https://xvezda.com)",
   "license": "MIT",
@@ -41,7 +53,13 @@
     "@babel/plugin-transform-runtime": "^7.8.3",
     "@babel/preset-env": "^7.8.7",
     "babel-loader": "^8.0.6",
+    "chai": "^4.3.4",
     "cross-env": "^7.0.2",
+    "in-publish": "^2.0.1",
+    "istanbul-instrumenter-loader": "^3.0.1",
+    "jsdoc": "~3.6.6",
+    "mocha": "^8.4.0",
+    "nyc": "^15.1.0",
     "standard": "^14.3.1",
     "webpack": "^4.42.0",
     "webpack-cli": "^3.3.11"
