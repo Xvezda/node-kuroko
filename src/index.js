@@ -188,13 +188,19 @@ async function getOutputByInput (subprocess, input) {
     })
   } catch (e) {
     // TODO: responsibility of killing process is up to caller, not here.
-    subprocess.kill(9) // SIGKILL
+    subprocess.kill('SIGKILL')
     throw e
   }
   return output
 }
 
 async function runTest (subprocess, testInput, expectedOutput) {
+  // Ensure process is running
+  if (subprocess.exitCode !== null) {
+    console.error('Process died before testing')
+    return TEST_FAILURE
+  }
+
   let actualOutput
   try {
     actualOutput = await getOutputByInput(subprocess, testInput)
@@ -223,20 +229,42 @@ async function getTestFilePath () {
 }
 
 async function getCommand (testFilePath) {
-  if (argv._.length > 0) {
+  const argv0 = argv._[0]
+  const isExists = async (fileName) => {
     try {
-      await fsPromises.access(argv._[0])
+      await fsPromises.access(fileName)
     } catch (e) {
-      return argv._[0]
+      return false
     }
+    return true
   }
 
+  if (argv._.length > 0 &&
+      !argv0.startsWith('.') &&
+      !argv0.startsWith('/') &&
+      !await isExists(argv0)) {
+    // Command is not an executable file
+    return argv0
+  }
+
+  let executable
   if (!argv.file) {
     try {
-      return await resolveTarget(testFilePath)
-    } catch (e) {}
+      executable = await resolveTarget(testFilePath)
+    } catch (e) {
+      /* Pass */
+    } finally {
+      executable = executable || path.normalize(argv0)
+    }
+  } else {
+    executable = argv.file
   }
-  return argv.file
+  if (!await isExists(executable)) {
+    return null
+  }
+  return !executable.startsWith('.')
+    ? path.resolve('./', executable)
+    : executable
 }
 
 function getArguments () {
@@ -282,10 +310,12 @@ async function main () {
       })
 
       output = await getOutputByInput(scaffoldProcess, input)
-      scaffoldProcess.kill()
 
       const exitCode = await new Promise((resolve, reject) => {
-        scaffoldProcess.on('exit', resolve)
+        scaffoldProcess.on('close', resolve)
+        scaffoldProcess.on('error', reject)
+
+        scaffoldProcess.kill('SIGINT')
       })
       if (exitCode !== 0) {
         console.error('Something went wrong while spawning scaffold process')
@@ -318,7 +348,7 @@ async function main () {
         green`=>`,
         `\`${outputName}\` correct`)
     }
-    subprocess.kill()
+    subprocess.kill('SIGINT')
   }
   if (failed) {
     return EXIT_FAILURE
