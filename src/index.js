@@ -162,7 +162,7 @@ async function getInputFiles (targetPath) {
   return globPromise(path.join(targetPath, '*.in'))
 }
 
-async function getOutputByInput(subprocess, input) {
+async function getOutputByInput (subprocess, input) {
   const inDataStream = Readable.from(input)
 
   // Check pipe to subprocess success
@@ -288,7 +288,7 @@ async function main () {
         scaffoldProcess.on('exit', resolve)
       })
       if (exitCode !== 0) {
-        console.error(`Something went wrong while spawning scaffold process`)
+        console.error('Something went wrong while spawning scaffold process')
         return EXIT_FAILURE
       }
       outputName = `${argv.scaffold} < ${inputName}`
