@@ -1,9 +1,8 @@
-/*
+/**
  * Use of this source code is governed by an MIT-style
  * license that can be found in the LICENSE file or at
  * https://opensource.org/licenses/MIT.
- */
-/**
+ *
  * @copyright Xvezda 2020
  */
 import path from 'path'
@@ -18,13 +17,13 @@ import { red, green, gray } from 'chalk'
 
 import packageJson from '../package.json'
 
-const EXIT_SUCCESS = 0
-const EXIT_FAILURE = 1
-const TEST_SUCCESS = EXIT_SUCCESS
-const TEST_FAILURE = EXIT_FAILURE
+export const EXIT_SUCCESS = 0
+export const EXIT_FAILURE = 1
+// TODO: Use different exitcode for tests
+export const TEST_SUCCESS = EXIT_SUCCESS
+export const TEST_FAILURE = EXIT_FAILURE
 
-const SEC_IN_MS = 1000
-// const MIN_IN_MS = 60 * SEC_IN_MS
+export const SEC_IN_MS = 1000
 
 const argsDefault = {
   timeout: 30
@@ -44,6 +43,9 @@ const argv = yargs
   .describe('timeout',
     util.format('Timeout value in seconds (default: %d)', argsDefault.timeout))
   .alias('t', 'timeout')
+  .option('scaffold')
+  .alias('s', 'scaffold')
+  .describe('scaffold', 'Command or executable file to compare with')
   .version(packageJson.version)
   .alias('V', 'version')
   .help('h')
@@ -74,7 +76,7 @@ function noLineFeed (strings, ...items) {
   return result.join('')
 }
 
-async function isExecutable(fileName) {
+async function isExecutable (fileName) {
   const filePath = path.resolve(fileName)
   let stats
   try {
@@ -92,6 +94,23 @@ async function isExecutable(fileName) {
     return false
   }
   return true
+}
+
+const globPromise = util.promisify(glob)
+
+function readablePromise (readable) {
+  return new Promise((resolve, reject) => {
+    let data = ''
+    readable.on('data', (d) => {
+      data += d.toString()
+    })
+    readable.on('end', () => {
+      resolve(data)
+    })
+    readable.on('error', (err) => {
+      reject(err)
+    })
+  })
 }
 
 async function getFilePath () {
@@ -118,8 +137,6 @@ async function resolveTarget (filePath) {
   }
   const targetStat = await fsPromises.stat(filePath)
 
-  const globPromise = util.promisify(glob)
-
   const indexes = getIndexFiles()
   if (targetStat.isDirectory()) {
     for (const index of indexes) {
@@ -142,87 +159,65 @@ async function resolveTarget (filePath) {
 }
 
 async function getInputFiles (targetPath) {
-  return new Promise((resolve, reject) => {
-    glob(path.join(targetPath, '*.in'), {}, (err, files) => {
-      if (err) {
-        return reject(err)
-      }
-      resolve(files)
-    })
-  })
+  return globPromise(path.join(targetPath, '*.in'))
 }
 
-async function runTest (subprocess, inputFile, outputFile) {
-  let inData
+async function getOutputByInput (subprocess, input) {
+  const inDataStream = Readable.from(input)
+
+  // Check pipe to subprocess success
+  await new Promise((resolve, reject) => {
+    subprocess.on('error', reject)
+    subprocess.stdin.on('pipe', resolve)
+
+    inDataStream.pipe(subprocess.stdin)
+  })
+
+  let output = ''
   try {
-    inData = await fsPromises.readFile(inputFile)
-  } catch (e) {
-    console.error(`Input file \`${inputFile}\` is missing`)
-    return TEST_FAILURE
-  }
-
-  let outData
-  try {
-    outData = await fsPromises.readFile(outputFile)
-  } catch (e) {
-    console.error(`Expect output file \`${outputFile}\` not exists`)
-    return TEST_FAILURE
-  }
-
-  const inDataString = inData.toString()
-  const inDataStream = Readable.from(inDataString)
-  inDataStream.pipe(subprocess.stdin)
-
-  try {
-    await new Promise((resolve, reject) => {
-      subprocess.stdin
-        .on('finish', resolve)
-        .on('error', reject)
-    })
-  } catch (e) {
-    console.error('Target process do not accept inputs')
-    return TEST_FAILURE
-  }
-
-  const outDataString = outData.toString()
-
-  let outputResult
-  try {
-    outputResult = await new Promise((resolve, reject) => {
+    output = await new Promise((resolve, reject) => {
       // Cancel on timeout
       const timer = setTimeout(reject, argv.timeout * SEC_IN_MS)
 
-      let result = ''
-      subprocess.stdout
-        .on('data', data => {
-          result += data.toString()
-        })
-        .on('end', () => {
+      readablePromise(subprocess.stdout)
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
           clearTimeout(timer)
-          resolve(result)
         })
     })
   } catch (e) {
-    subprocess.kill(9) // SIGKILL
+    // TODO: responsibility of killing process is up to caller, not here.
+    subprocess.kill('SIGKILL')
+    throw e
+  }
+  return output
+}
+
+async function runTest (subprocess, testInput, expectedOutput) {
+  // Ensure process is running
+  if (subprocess.exitCode !== null) {
+    console.error('Process died before testing')
+    return TEST_FAILURE
+  }
+
+  let actualOutput
+  try {
+    actualOutput = await getOutputByInput(subprocess, testInput)
+  } catch (e) {
     console.error(
       red`timeout`, gray`-`,
       `Force killed process \`${subprocess.spawnfile}\``,
       `due to timeout limit of \`${argv.timeout}s\` passed`)
     return TEST_FAILURE
   }
-  if (outDataString !== outputResult) {
+  if (expectedOutput.trim() !== actualOutput.trim()) {
     console.error(
       red`failed `, gray`-`,
-      noLineFeed`Expect \`${outDataString}\`, but output is \`${outputResult}\``
+      noLineFeed`Expect \`${expectedOutput}\`, but output is \`${actualOutput}\``
     )
     return TEST_FAILURE
   }
-  console.log(
-    green`success`, gray`-`,
-    `Test case \`${path.basename(inputFile)}\``,
-    green`=>`,
-    `\`${path.basename(outputFile)}\` correct`)
-
   return TEST_SUCCESS
 }
 
@@ -234,20 +229,42 @@ async function getTestFilePath () {
 }
 
 async function getCommand (testFilePath) {
-  if (argv._.length > 0) {
+  const argv0 = argv._[0]
+  const isExists = async (fileName) => {
     try {
-      await fsPromises.access(argv._[0])
+      await fsPromises.access(fileName)
     } catch (e) {
-      return argv._[0]
+      return false
     }
+    return true
   }
 
+  if (argv._.length > 0 &&
+      !argv0.startsWith('.') &&
+      !argv0.startsWith('/') &&
+      !await isExists(argv0)) {
+    // Command is not an executable file
+    return argv0
+  }
+
+  let executable
   if (!argv.file) {
     try {
-      return await resolveTarget(testFilePath)
-    } catch (e) {}
+      executable = await resolveTarget(testFilePath)
+    } catch (e) {
+      /* Pass */
+    } finally {
+      executable = executable || path.normalize(argv0)
+    }
+  } else {
+    executable = argv.file
   }
-  return argv.file
+  if (!await isExists(executable)) {
+    return null
+  }
+  return !executable.startsWith('.')
+    ? path.resolve('./', executable)
+    : executable
 }
 
 function getArguments () {
@@ -282,15 +299,61 @@ async function main () {
     // TODO: How to handle spawn error gracefully?
     subprocess.on('error', () => {})
 
-    // Output filenames should match to input files
-    const outputFile = inputFile
-      .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
+    const input = await fsPromises.readFile(inputFile)
+    const inputName = path.basename(inputFile)
 
-    const testResult = await runTest(subprocess, inputFile, outputFile)
+    let output, outputName
+    if (argv.scaffold) {
+      const tokens = argv.scaffold.split(' ')
+      const scaffoldProcess = spawn(tokens[0], tokens.slice(1), {
+        stdio: ['pipe', 'pipe', 'inherit']
+      })
+
+      try {
+        output = await getOutputByInput(scaffoldProcess, input)
+      } catch (e) {
+        console.error('Scaffolding process timeout')
+        return EXIT_FAILURE
+      }
+
+      const exitCode = await new Promise((resolve, reject) => {
+        scaffoldProcess.on('close', resolve)
+        scaffoldProcess.on('error', reject)
+
+        scaffoldProcess.kill('SIGINT')
+      })
+      if (exitCode !== 0) {
+        console.error('Something went wrong while spawning scaffold process')
+        return EXIT_FAILURE
+      }
+      outputName = `${argv.scaffold} < ${inputName}`
+    } else {
+      // Output filenames should match to input files
+      const outputFile = inputFile
+        .replace(new RegExp(path.extname(inputFile) + '$'), '') + '.out'
+
+      try {
+        output = await fsPromises.readFile(outputFile)
+      } catch (e) {
+        console.error(`Error occured while reading test files: ${e}`)
+        return EXIT_FAILURE
+      }
+      outputName = path.basename(outputFile)
+    }
+
+    const testResult = await runTest(
+      subprocess, input.toString(), output.toString())
+
     if (testResult === TEST_FAILURE) {
       failed = true
+    } else {
+      console.log(
+        green`success`, gray`-`,
+        `Test case \`${inputName}\``,
+        green`=>`,
+        `\`${outputName}\` correct`)
     }
-    subprocess.kill()
+    subprocess.kill('SIGINT')
   }
   if (failed) {
     return EXIT_FAILURE
