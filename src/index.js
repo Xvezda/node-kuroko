@@ -162,13 +162,13 @@ async function getInputFiles (targetPath) {
   return globPromise(path.join(targetPath, '*.in'))
 }
 
-async function runTest (subprocess, testInput, expectedOutput) {
-  const inDataStream = Readable.from(testInput)
+async function getOutputByInput(subprocess, input) {
+  const inDataStream = Readable.from(input)
   inDataStream.pipe(subprocess.stdin)
 
-  let actualOutput
+  let output = ''
   try {
-    actualOutput = await new Promise((resolve, reject) => {
+    output = await new Promise((resolve, reject) => {
       // Cancel on timeout
       const timer = setTimeout(reject, argv.timeout * SEC_IN_MS)
 
@@ -185,6 +185,16 @@ async function runTest (subprocess, testInput, expectedOutput) {
       red`timeout`, gray`-`,
       `Force killed process \`${subprocess.spawnfile}\``,
       `due to timeout limit of \`${argv.timeout}s\` passed`)
+    return null
+  }
+  return output
+}
+
+async function runTest (subprocess, testInput, expectedOutput) {
+  let actualOutput
+  try {
+    actualOutput = await getOutputByInput(subprocess, testInput)
+  } catch (e) {
     return TEST_FAILURE
   }
   if (expectedOutput.trim() !== actualOutput.trim()) {
