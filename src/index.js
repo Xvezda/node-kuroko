@@ -309,7 +309,12 @@ async function main () {
         stdio: ['pipe', 'pipe', 'inherit']
       })
 
-      output = await getOutputByInput(scaffoldProcess, input)
+      try {
+        output = await getOutputByInput(scaffoldProcess, input)
+      } catch (e) {
+        console.error('Scaffolding process timeout')
+        return EXIT_FAILURE
+      }
 
       const exitCode = await new Promise((resolve, reject) => {
         scaffoldProcess.on('close', resolve)
