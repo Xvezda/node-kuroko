@@ -27,10 +27,13 @@
     "url": "git+https://github.com/Xvezda/node-kuroko.git"
   },
   "keywords": [
+    "tests",
     "testcase",
     "judgement",
     "problem solving",
     "competitive programming",
+    "cli",
+    "command",
     "scaffolding"
   ],
   "author": "Xvezda <xvezda@naver.com> (https://xvezda.com)",
