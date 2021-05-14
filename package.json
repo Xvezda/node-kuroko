@@ -14,6 +14,7 @@
     "prepublish": "yarn clean && yarn format && yarn build && yarn test",
     "clean": "rm -rf dist/",
     "test": "mocha",
+    "docs": "jsdoc -r src/",
     "cover": "yarn run cover:unit && yarn run cover:report",
     "cover:unit": "nyc --silent yarn run test",
     "cover:report": "nyc report"
