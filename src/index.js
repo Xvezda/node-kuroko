@@ -243,7 +243,7 @@ async function runTest (subprocess, testInput, expectedOutput) {
     actualOutput = await getOutputByInput(subprocess, testInput)
   } catch (e) {
     throw new TimeoutError({
-      processName: subprocess.spawnfile,
+      processName: subprocess.spawnfile
     })
   }
   if (expectedOutput.trim() !== actualOutput.trim()) {

@@ -9,7 +9,7 @@
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error#custom_error_types
 export class CustomError extends Error {
-  constructor(props, ...params) {
+  constructor (props, ...params) {
     super(...params)
 
     Object.assign(this, props)
@@ -20,4 +20,3 @@ export class CustomError extends Error {
     }
   }
 }
-
