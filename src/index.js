@@ -395,6 +395,8 @@ async function main () {
       if (e instanceof TestFailError) {
         console.error(
           red`failed `, gray`-`,
+          `Test case \`${inputName}\``,
+          red`=>`,
           noLineFeed`Expect \`${e.expect}\`, but output is \`${e.actual}\``
         )
       } else if (e instanceof TimeoutError) {
