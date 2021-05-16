@@ -4,6 +4,7 @@
  * https://opensource.org/licenses/MIT.
  *
  * @copyright Xvezda 2020
+ * @author Xvezda <xvezda@naver.com>
  */
 import path from 'path'
 import util from 'util'
@@ -16,6 +17,7 @@ import glob from 'glob'
 import { red, green, gray } from 'chalk'
 
 import packageJson from '../package.json'
+import { CustomError } from './common'
 
 export const EXIT_SUCCESS = 0
 export const EXIT_FAILURE = 1
@@ -24,6 +26,9 @@ export const TEST_SUCCESS = EXIT_SUCCESS
 export const TEST_FAILURE = EXIT_FAILURE
 
 export const SEC_IN_MS = 1000
+
+class TimeoutError extends CustomError {}
+class TestFailError extends CustomError {}
 
 const argsDefault = {
   timeout: 30
@@ -230,26 +235,22 @@ async function getOutputByInput (subprocess, input) {
 async function runTest (subprocess, testInput, expectedOutput) {
   // Ensure process is running
   if (subprocess.exitCode !== null) {
-    console.error('Process died before testing')
-    return TEST_FAILURE
+    throw new Error('Process died before testing')
   }
 
   let actualOutput
   try {
     actualOutput = await getOutputByInput(subprocess, testInput)
   } catch (e) {
-    console.error(
-      red`timeout`, gray`-`,
-      `Force killed process \`${subprocess.spawnfile}\``,
-      `due to timeout limit of \`${argv.timeout}s\` passed`)
-    return TEST_FAILURE
+    throw new TimeoutError({
+      processName: subprocess.spawnfile,
+    })
   }
   if (expectedOutput.trim() !== actualOutput.trim()) {
-    console.error(
-      red`failed `, gray`-`,
-      noLineFeed`Expect \`${expectedOutput}\`, but output is \`${actualOutput}\``
-    )
-    return TEST_FAILURE
+    throw new TestFailError({
+      expect: expectedOutput,
+      actual: actualOutput
+    })
   }
   return TEST_SUCCESS
 }
@@ -384,8 +385,30 @@ async function main () {
       outputName = path.basename(outputFile)
     }
 
-    const testResult = await runTest(
-      subprocess, input.toString(), output.toString())
+    let testResult = TEST_FAILURE
+    try {
+      await runTest(
+        subprocess, input.toString(), output.toString())
+
+      testResult = TEST_SUCCESS
+    } catch (e) {
+      if (e instanceof TestFailError) {
+        console.error(
+          red`failed `, gray`-`,
+          noLineFeed`Expect \`${e.expect}\`, but output is \`${e.actual}\``
+        )
+      } else if (e instanceof TimeoutError) {
+        console.error(
+          red`timeout`, gray`-`,
+          `Force killed process \`${e.processName}\``,
+          `due to timeout limit of \`${argv.timeout}s\` passed`)
+      } else {
+        console.error(
+          red`error  `, gray`-`,
+          noLineFeed`Error occured while testing: ${e.message}`
+        )
+      }
+    }
 
     if (testResult === TEST_FAILURE) {
       failed = true
