@@ -279,7 +279,7 @@ async function getCommand (testFilePath) {
 
   if (argv._.length > 0 &&
       !argv0.startsWith('.') &&
-      !argv0.startsWith('/') &&
+      !path.isAbsolute(argv0) &&
       !await isExists(argv0)) {
     // Command is not an executable file
     return argv0
@@ -292,7 +292,7 @@ async function getCommand (testFilePath) {
     } catch (e) {
       /* Pass */
     } finally {
-      executable = executable || path.normalize(argv0)
+      executable = executable || argv0
     }
   } else {
     executable = argv.file
