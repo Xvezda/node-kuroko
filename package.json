@@ -44,6 +44,7 @@
   "homepage": "https://github.com/Xvezda/node-kuroko#readme",
   "dependencies": {
     "chalk": "^3.0.0",
+    "tiny-glob": "^0.2.9",
     "yargs": "^15.3.0"
   },
   "devDependencies": {
