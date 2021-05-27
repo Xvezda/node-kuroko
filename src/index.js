@@ -13,7 +13,7 @@ import { Readable } from 'stream'
 import { spawn } from 'child_process'
 
 import yargs from 'yargs'
-import glob from 'glob'
+import glob from 'tiny-glob'
 import { red, green, gray } from 'chalk'
 
 import packageJson from '../package.json'
@@ -111,12 +111,6 @@ async function isExecutable (fileName) {
 }
 
 /**
- * Promisified glob
- * @return {Promise}
- */
-const globPromise = util.promisify(glob)
-
-/**
  * Convert readable stream into string
  * @param {Readable} readable
  * @return {Promise}
@@ -172,7 +166,7 @@ async function resolveTarget (filePath) {
     for (const index of indexes) {
       let matches
       try {
-        matches = await globPromise(path.join(filePath, index))
+        matches = await glob(path.join(filePath, index))
       } catch (e) {
         console.error(e)
         continue
@@ -193,7 +187,7 @@ async function resolveTarget (filePath) {
  * @return {Promise}
  */
 async function getInputFiles (targetPath) {
-  return globPromise(path.join(targetPath, '*.in'))
+  return glob(path.join(targetPath, '*.in'))
 }
 
 /**
